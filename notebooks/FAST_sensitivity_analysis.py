@@ -76,15 +76,25 @@ from daesim2_analysis import fast_sensitivity as fastsa
 
 # %%
 ## Parameters
-parameter_modulepath = ["PlantCH2O.CanopyGasExchange.Leaf", "PlantCH2O.CanopyGasExchange.Leaf", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantDev", "PlantDev", "", ""]
-parameter_module = ["Leaf", "Leaf", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantDev", "PlantDev", "", ""]
-parameter_names  = ["Vcmax_opt", "g1", "SLA", "maxLAI", "ksr_coeff", "Psi_f", "gdd_requirements", "gdd_requirements", "GY_FE", "GY_SDW_50"]
-parameter_units  = ["mol CO2 m-2 s-1", "kPa^0.5", "m2 g d.wt-1", "m2 m-2", "g d.wt-1 m-1", "MPa", "deg C d", "deg C d", "thsnd grains g d.wt spike-1", "g d.wt m-2"]
-parameter_init   = [60e-6, 3, 0.03, 6, 1000, -1.5, 900, 650, 0.1, 100]
-parameter_min    = [30e-6, 1, 0.015, 5, 300, -4.0, 600, 350, 0.08, 80]
-parameter_max    = [120e-6, 6, 0.035, 7, 5000, -1.0, 1800, 700, 0.21, 150]
-parameter_phase_specific = [False, False, False, False, False, False, True, True, False, False]
-parameter_phase = [None, None, None, None, None, None, "vegetative", "grainfill", None, None]
+# parameter_modulepath = ["PlantCH2O.CanopyGasExchange.Leaf", "PlantCH2O.CanopyGasExchange.Leaf", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantDev", "PlantDev", "", ""]
+# parameter_module = ["Leaf", "Leaf", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantDev", "PlantDev", "", ""]
+# parameter_names  = ["Vcmax_opt", "g1", "SLA", "maxLAI", "ksr_coeff", "Psi_f", "gdd_requirements", "gdd_requirements", "GY_FE", "GY_SDW_50"]
+# parameter_units  = ["mol CO2 m-2 s-1", "kPa^0.5", "m2 g d.wt-1", "m2 m-2", "g d.wt-1 m-1", "MPa", "deg C d", "deg C d", "thsnd grains g d.wt spike-1", "g d.wt m-2"]
+# parameter_init   = [60e-6, 3, 0.03, 6, 1000, -1.5, 900, 650, 0.1, 100]
+# parameter_min    = [30e-6, 1, 0.015, 5, 300, -4.0, 600, 350, 0.08, 80]
+# parameter_max    = [120e-6, 6, 0.035, 7, 5000, -1.0, 1800, 700, 0.21, 150]
+# parameter_phase_specific = [False, False, False, False, False, False, True, True, False, False]
+# parameter_phase = [None, None, None, None, None, None, "vegetative", "grainfill", None, None]
+
+parameter_modulepath = ["PlantCH2O.CanopyGasExchange.Leaf", "PlantCH2O.CanopyGasExchange.Leaf", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantDev", "PlantDev", "", "", "", ""]
+parameter_module = ["Leaf", "Leaf", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantDev", "PlantDev", "", "", "", ""]
+parameter_names  = ["Vcmax_opt", "g1", "SLA", "maxLAI", "ksr_coeff", "Psi_f", "sf", "gdd_requirements", "gdd_requirements", "GY_FE", "GY_SDW_50", "CI", "d_r_max"]
+parameter_units  = ["mol CO2 m-2 s-1", "kPa^0.5", "m2 g d.wt-1", "m2 m-2", "g d.wt-1 m-1", "MPa", "MPa-1", "deg C d", "deg C d", "thsnd grains g d.wt spike-1", "g d.wt m-2", "-", "m"]
+parameter_init   = [60e-6, 3, 0.03, 6, 1000, -3.5, 3.5, 900, 650, 0.1, 100, 0.75, 0.5]
+parameter_min    = [30e-6, 1, 0.015, 5, 300, -8.0, 1.5, 600, 350, 0.08, 80, 0.5, 0.15]
+parameter_max    = [120e-6, 6, 0.035, 7, 5000, -1.0, 7.0, 1800, 700, 0.21, 150, 1.0, 0.66]
+parameter_phase_specific = [False, False, False, False, False, False, False, True, True, False, False, False, False]
+parameter_phase = [None, None, None, None, None, None, None, "vegetative", "grainfill", None, None, None, None]
 
 # %%
 # Check if all parameter vectors have the same length
@@ -415,10 +425,11 @@ zero_crossing_indices = [4,5,6]
 # Once you have the samples, you can evaluate your model at each of the sampled input points. This typically involves running a loop where each set of sampled inputs is passed through the model, and the output (or outputs) is recorded.
 
 # %%
-# write_to_nc = False
+# write_to_nc = True
 
-# # Location/site of the simulations
-# xsite = "Milgadara_2021_test_single"
+# # # Location/site of the simulations
+# # xsite = "Milgadara_2021_test_single"
+# xsite = "Rutherglen_1971_test_single"
 
 
 # # Path for writing outputs to file
