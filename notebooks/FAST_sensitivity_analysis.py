@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.16.4
+#       jupytext_version: 1.16.6
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -138,6 +138,9 @@ param_values.shape
 # %% [markdown]
 # ### Step 4. Initialise the study site and import forcing data
 
+# %% [markdown]
+# #### a. Milgadara site 2018-2019
+
 # %%
 # Import two years of forcing files and combine then
 file = "/Users/alexandernorton/ANU/Projects/DAESIM/daesim/data/DAESim_forcing_Milgadara_2018.csv"
@@ -159,19 +162,7 @@ df_forcing.reset_index(drop=True, inplace=True)
 df_forcing["DOY"] = df_forcing["Date"].dt.dayofyear
 df_forcing["Year"] = df_forcing["Date"].dt.year
 
-# %%
 
-# %%
-# file = "/Users/alexandernorton/ANU/Projects/DAESIM/daesim/data/DAESim_forcing_Milgadara_2021.csv"
-# df_forcing = pd.read_csv(file)
-
-# df_forcing['Date'] = pd.to_datetime(df_forcing['Date'])
-
-# # Add ordinal day of year (DOY) and Year variables
-# df_forcing["DOY"] = df_forcing["Date"].dt.dayofyear
-# df_forcing["Year"] = df_forcing["Date"].dt.year
-
-# %%
 ## Interpolate discrete soil moisture data
 df_forcing["Soil moisture interp"] = df_forcing["Soil moisture"].interpolate('quadratic')
 
@@ -188,30 +179,30 @@ f_soilTheta_norm = f_soilTheta_min + f_soilTheta_norm_mm * (f_soilTheta_max - f_
 
 ## Milgadara site location-34.38904277303204, 148.46949938279096
 SiteX = ClimateModule(CLatDeg=-34.389,CLonDeg=148.469,timezone=10)
-start_doy = df_forcing["DOY"].values[0]    # 1.0
-start_year = df_forcing["Year"].values[0]   # 2021
-nrundays = df_forcing.index.size
+start_doy_f = df_forcing["DOY"].values[0]
+start_year_f = df_forcing["Year"].values[0]
+nrundays_f = df_forcing.index.size
 
 ## Time discretisation
-time_nday, time_doy, time_year = SiteX.time_discretisation(start_doy, start_year, nrundays=nrundays)
+time_nday_f, time_doy_f, time_year_f = SiteX.time_discretisation(start_doy_f, start_year_f, nrundays=nrundays_f)
 ## Adjust daily time-step to represent midday on each day
-time_doy = [time_doy[i]+0.5 for i in range(len(time_doy))]
+time_doy_f = [time_doy_f[i]+0.5 for i in range(len(time_doy_f))]
 
-# %% [markdown]
-# ### - Discrete forcing data
+## Time discretization for forcing data
+time_index_f = pd.to_datetime(df_forcing["Date"].values)
 
-# %%
+# Define lists of sowing and harvest dates
+sowing_dates = [
+    pd.Timestamp(year=2018, month=7, day=20),  # First season
+    pd.Timestamp(year=2019, month=7, day=15)   # Second season
+]
 
-# %%
+harvest_dates = [
+    pd.Timestamp(year=2018, month=12, day=10),  # First season
+    pd.Timestamp(year=2019, month=12, day=5)    # Second season
+]
 
-# %%
 
-# %%
-
-# %% [markdown]
-# ### - Interpolated forcing data
-
-# %%
 ## Make some assumption about the fraction of diffuse radiation
 diffuse_fraction = 0.2
 
@@ -220,13 +211,13 @@ _Rsb_Wm2 = (1-diffuse_fraction) * df_forcing["SRAD"].values * 1e6 / (60*60*24)
 _Rsd_Wm2 = diffuse_fraction * df_forcing["SRAD"].values * 1e6 / (60*60*24)
 
 ## Create synthetic data for other forcing variables
-_p = 101325*np.ones(nrundays)
+_p = 101325*np.ones(nrundays_f)
 _es = SiteX.compute_sat_vapor_pressure_daily(df_forcing["Minimum temperature"].values,df_forcing["Maximum temperature"].values)
 _RH = SiteX.compute_relative_humidity(df_forcing["VPeff"].values/10,_es/1000)
 _RH[_RH > 100] = 100
 _CO2 = 400*(_p/1e5)*1e-6     ## carbon dioxide partial pressure (bar)
 _O2 = 209000*(_p/1e5)*1e-6   ## oxygen partial pressure (bar)
-_soilTheta =  0.35*np.ones(nrundays)   ## volumetric soil moisture content (m3 m-3)
+_soilTheta =  0.35*np.ones(nrundays_f)   ## volumetric soil moisture content (m3 m-3)
 _soilTheta = f_soilTheta_norm
 
 ## Create a multi-layer soil moisture forcing dataset
@@ -238,32 +229,56 @@ _soilTheta_z0 = _soilTheta-0.06
 _soilTheta_z1 = _soilTheta+0.02
 _soilTheta_z = np.column_stack((_soilTheta_z0, _soilTheta_z1))
 
-# %%
-Climate_doy_f = interp_forcing(time_nday, time_doy, kind="pconst", fill_value=(time_doy[0],time_doy[-1]))
-Climate_year_f = interp_forcing(time_nday, time_year, kind="pconst", fill_value=(time_year[0],time_year[-1]))
-Climate_airTempCMin_f = interp1d(time_nday, df_forcing["Minimum temperature"].values)
-Climate_airTempCMax_f = interp1d(time_nday, df_forcing["Maximum temperature"].values)
-Climate_airTempC_f = interp1d(time_nday, (df_forcing["Minimum temperature"].values+df_forcing["Maximum temperature"].values)/2)
-Climate_solRadswskyb_f = interp1d(time_nday, _Rsb_Wm2)
-Climate_solRadswskyd_f = interp1d(time_nday, _Rsd_Wm2)
-Climate_airPressure_f = interp1d(time_nday, _p)
-Climate_airRH_f = interp1d(time_nday, _RH)
-Climate_airU_f = interp1d(time_nday, df_forcing["Uavg"].values)
-Climate_airCO2_f = interp1d(time_nday, _CO2)
-Climate_airO2_f = interp1d(time_nday, _O2)
-Climate_soilTheta_f = interp1d(time_nday, _soilTheta)
-Climate_soilTheta_z_f = interp1d(time_nday, _soilTheta_z, axis=0)  # Interpolates across timesteps, handles all soil layers at once
-Climate_nday_f = interp1d(time_nday, time_nday)   ## nday represents the ordinal day-of-year plus each simulation day (e.g. a model run starting on Jan 30 and going for 2 years will have nday=30+np.arange(2*365))
+
+Climate_doy_f = interp_forcing(time_nday_f, time_doy_f, kind="pconst", fill_value=(time_doy_f[0],time_doy_f[-1]))
+Climate_year_f = interp_forcing(time_nday_f, time_year_f, kind="pconst", fill_value=(time_year_f[0],time_year_f[-1]))
+Climate_airTempCMin_f = interp1d(time_nday_f, df_forcing["Minimum temperature"].values)
+Climate_airTempCMax_f = interp1d(time_nday_f, df_forcing["Maximum temperature"].values)
+Climate_airTempC_f = interp1d(time_nday_f, (df_forcing["Minimum temperature"].values+df_forcing["Maximum temperature"].values)/2)
+Climate_solRadswskyb_f = interp1d(time_nday_f, _Rsb_Wm2)
+Climate_solRadswskyd_f = interp1d(time_nday_f, _Rsd_Wm2)
+Climate_airPressure_f = interp1d(time_nday_f, _p)
+Climate_airRH_f = interp1d(time_nday_f, _RH)
+Climate_airU_f = interp1d(time_nday_f, df_forcing["Uavg"].values)
+Climate_airCO2_f = interp1d(time_nday_f, _CO2)
+Climate_airO2_f = interp1d(time_nday_f, _O2)
+Climate_soilTheta_f = interp1d(time_nday_f, _soilTheta)
+Climate_soilTheta_z_f = interp1d(time_nday_f, _soilTheta_z, axis=0)  # Interpolates across timesteps, handles all soil layers at once
+Climate_nday_f = interp1d(time_nday_f, time_nday_f)   ## nday represents the ordinal day-of-year plus each simulation day (e.g. a model run starting on Jan 30 and going for 2 years will have nday=30+np.arange(2*365))
 
 # %% [markdown]
 # ### Step 4. Initialise the Model
 
 # %%
-time_axis = np.arange(135, 391, 1)   ## Note: time_axis represents the simulation day (_nday) and must be the same x-axis upon which the forcing data was interpolated on
-sowing_date = 135
-harvest_date = None
+## Check that the first sowing date and last harvest date are within the available forcing data period
+# Apply validation to sowing and harvest dates
+SiteX.validate_event_dates(sowing_dates, time_index_f, event_name="Sowing")
+SiteX.validate_event_dates(harvest_dates, time_index_f, event_name="Harvest")
 
-ManagementX = ManagementModule(cropType="Wheat",sowingDay=sowing_date,harvestDay=harvest_date)
+# Find steps for all sowing and harvest dates in the forcing data
+sowing_steps_f = SiteX.find_event_steps(sowing_dates, time_index_f)
+harvest_steps_f = SiteX.find_event_steps(harvest_dates, time_index_f)
+
+# 3. Generate time axis for ODE Solver, which is set to start at the first sowing event and end just after the last harvest event
+time_axis = time_nday_f[sowing_steps_f[0]:harvest_steps_f[-1]+2]
+# Corresponding date time index
+time_index = time_index_f[sowing_steps_f[0]:harvest_steps_f[-1]+2]
+
+## Determine the ODE solver reset days
+sowing_steps_itax = SiteX.find_event_steps(sowing_dates, time_index)
+harvest_steps_itax = SiteX.find_event_steps(harvest_dates, time_index)
+reset_days_itax = SiteX.find_event_steps(sowing_dates+harvest_dates, time_index)
+reset_days_itax.sort()
+reset_days_tax = list(time_axis[reset_days_itax])
+
+## Determine the sowing and harvest days and years for the DAESIM2 Management module
+sowingDays = np.floor(Climate_doy_f(time_axis[sowing_steps_itax]))
+sowingYears = np.floor(Climate_year_f(time_axis[sowing_steps_itax]))
+harvestDays = np.floor(Climate_doy_f(time_axis[harvest_steps_itax]))
+harvestYears = np.floor(Climate_year_f(time_axis[harvest_steps_itax]))
+
+# %%
+ManagementX = ManagementModule(cropType="Wheat",sowingDays=sowingDays,harvestDays=harvestDays,sowingYears=sowingYears,harvestYears=harvestYears)
 
 PlantDevX = PlantGrowthPhases(
     phases=["germination", "vegetative", "spike", "anthesis", "grainfill", "maturity"],
@@ -331,7 +346,7 @@ forcing_inputs = [Climate_solRadswskyb_f,
                   Climate_doy_f,
                   Climate_year_f]
 
-reset_days = [PlantX.Management.sowingDay, PlantX.Management.harvestDay]
+reset_days = reset_days_tax
 
 zero_crossing_indices = [4,5,6]
 
@@ -345,6 +360,7 @@ zero_crossing_indices = [4,5,6]
 
 # # Location/site of the simulations
 # xsite = "Milgadara_2021_test_single"
+
 
 # # Path for writing outputs to file
 # filepath_write = "/Users/alexandernorton/ANU/Projects/DAESim/DAESIM/results/FAST/"
@@ -380,7 +396,10 @@ zero_crossing_indices = [4,5,6]
 #     # File name for writing outputs to file
 #     filename_write = f"FAST_results_{xsite}_paramset{nparamset:0{nsigfigures}}.nc"
 #     paramset = param_values[iparamset]
-#     fastsa.write_diagnostics_to_nc(PlantX, diagnostics, filepath_write, filename_write, time_axis, time_nday, time_year, time_doy, problem, paramset)
+#     fastsa.write_diagnostics_to_nc(PlantX, diagnostics, filepath_write, filename_write, time_axis, time_nday_f, time_year_f, time_doy_f, problem, paramset)
+
+
+# %%
 
 # %%
 write_to_nc = True
@@ -425,7 +444,7 @@ for iparamset in range(nsamples):
         # File name for writing outputs to file
         filename_write = f"FAST_results_{xsite}_paramset{nparamset:0{nsigfigures}}.nc"
         paramset = param_values[iparamset]
-        fastsa.write_diagnostics_to_nc(PlantX, diagnostics, filepath_write, filename_write, time_axis, time_nday, time_year, time_doy, problem, paramset)
+        fastsa.write_diagnostics_to_nc(PlantX, diagnostics, filepath_write, filename_write, time_axis, time_nday_f, time_year_f, time_doy_f, problem, paramset)
 
 # Write the target variables data to a csv file
 fname_target_variables = f"{filepath_write}FAST_results_{xsite}_target_variables.csv"
