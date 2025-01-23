@@ -247,6 +247,57 @@ Climate_soilTheta_z_f = interp1d(time_nday_f, _soilTheta_z, axis=0)  # Interpola
 Climate_nday_f = interp1d(time_nday_f, time_nday_f)   ## nday represents the ordinal day-of-year plus each simulation day (e.g. a model run starting on Jan 30 and going for 2 years will have nday=30+np.arange(2*365))
 
 # %% [markdown]
+# #### b. Rutherglen Site 1971
+
+# %%
+df_forcing = pd.read_csv("/Users/alexandernorton/ANU/Projects/DAESim/DAESIM/data/DAESim_forcing_Rutherglen_1971.csv")
+
+SiteX = ClimateModule(CLatDeg=-36.05,CLonDeg=146.5,timezone=10)
+start_doy_f = df_forcing["DOY"].values[0]
+start_year_f = df_forcing["Year"].values[0]
+nrundays_f = df_forcing.index.size
+
+## Time discretisation
+time_nday_f, time_doy_f, time_year_f = SiteX.time_discretisation(start_doy_f, start_year_f, nrundays=nrundays_f)
+## Adjust daily time-step to represent midday on each day
+time_doy_f = [time_doy_f[i]+0.5 for i in range(len(time_doy_f))]
+
+## Time discretization for forcing data
+time_index_f = pd.to_datetime(df_forcing["Date"].values)
+
+# Define lists of sowing and harvest dates
+sowing_dates = [
+    pd.Timestamp(year=1971, month=5, day=11)
+]
+
+harvest_dates = [
+    pd.Timestamp(year=1971, month=12, day=23)
+]
+
+_soilTheta_z = np.column_stack((
+    df_forcing["Soil moisture 5 cm"].values,
+    df_forcing["Soil moisture 8 cm"].values,
+    df_forcing["Soil moisture 14 cm"].values,
+    df_forcing["Soil moisture 22 cm"].values,
+    df_forcing["Soil moisture 34 cm"].values,
+    df_forcing["Soil moisture 52 cm"].values,))
+
+Climate_doy_f = interp_forcing(time_nday_f, time_doy_f, kind="pconst") #, fill_value=(time_doy[0],time_doy[-1]))
+Climate_year_f = interp_forcing(time_nday_f, time_year_f, kind="pconst") #, fill_value=(time_year[0],time_year[-1]))
+Climate_airTempCMin_f = interp1d(time_nday_f, df_forcing["Minimum temperature"].values)
+Climate_airTempCMax_f = interp1d(time_nday_f, df_forcing["Maximum temperature"].values)
+Climate_airTempC_f = interp1d(time_nday_f, (df_forcing["Minimum temperature"].values+df_forcing["Maximum temperature"].values)/2)
+Climate_solRadswskyb_f = interp1d(time_nday_f, 10*(df_forcing["Global Radiation"].values-df_forcing["Diffuse Radiation"].values))
+Climate_solRadswskyd_f = interp1d(time_nday_f, 10*df_forcing["Diffuse Radiation"].values)
+Climate_airPressure_f = interp1d(time_nday_f, 100*df_forcing["Pressure"].values)
+Climate_airRH_f = interp1d(time_nday_f, df_forcing["Relative Humidity"].values)
+Climate_airU_f = interp1d(time_nday_f, df_forcing["Uavg"].values)
+Climate_airCO2_f = interp1d(time_nday_f, df_forcing["Atmospheric CO2 Concentration (bar)"].values)
+Climate_airO2_f = interp1d(time_nday_f, df_forcing["Atmospheric O2 Concentration (bar)"].values)
+Climate_soilTheta_z_f = interp1d(time_nday_f, _soilTheta_z, axis=0)  # Interpolates across timesteps, handles all soil layers at once
+Climate_nday_f = interp1d(time_nday_f, time_nday_f)   ## nday represents the ordinal day-of-year plus each simulation day (e.g. a model run starting on Jan 30 and going for 2 years will have nday=30+np.arange(2*365))
+
+# %% [markdown]
 # ### Step 4. Initialise the Model
 
 # %%
@@ -282,8 +333,10 @@ ManagementX = ManagementModule(cropType="Wheat",sowingDays=sowingDays,harvestDay
 
 PlantDevX = PlantGrowthPhases(
     phases=["germination", "vegetative", "spike", "anthesis", "grainfill", "maturity"],
-    gdd_requirements=[120,800,250,200,300,200],
-    vd_requirements=[0, 40, 0, 0, 0, 0],
+    # gdd_requirements=[120,800,250,200,300,200],
+    gdd_requirements=[50,800,280,150,300,300],
+    # vd_requirements=[0, 40, 0, 0, 0, 0],
+    vd_requirements=[0, 30, 0, 0, 0, 0],
     allocation_coeffs = [
         [0.2, 0.1, 0.7, 0.0, 0.0],
         [0.5, 0.1, 0.4, 0.0, 0.0],
@@ -299,14 +352,20 @@ PlantDevX = PlantGrowthPhases(
                       [0.033, 0.016, 0.033, 0.0002, 0.0],
                       [0.10, 0.033, 0.10, 0.0002, 0.0]])
 
-
 BoundLayerX = BoundaryLayerModule(Site=SiteX)
 LeafX = LeafGasExchangeModule2(Site=SiteX,Jmax_opt_rVcmax=0.89,Jmax_opt_rVcmax_method="log")
 CanopyX = CanopyLayers(nlevmlcan=3)
 CanopyRadX = CanopyRadiation(Canopy=CanopyX)
 CanopyGasExchangeX = CanopyGasExchange(Leaf=LeafX,Canopy=CanopyX,CanopyRad=CanopyRadX)
-SoilLayersX = SoilLayers(nlevmlsoil=2,z_max=2.0)
-PlantCH2OX = PlantCH2O(Site=SiteX,SoilLayers=SoilLayersX,CanopyGasExchange=CanopyGasExchangeX,BoundaryLayer=BoundLayerX,maxLAI=6.0,ksr_coeff=1000,SLA=0.030)
+# SoilLayersX = SoilLayers(nlevmlsoil=2,z_max=2.0)
+SoilLayersX = SoilLayers(nlevmlsoil=6,z_max=0.66,z_top=0.10,discretise_method="horizon",
+                         z_horizon=[0.06, 0.06, 0.06, 0.10, 0.10, 0.28],
+                        Psi_e=[-1.38E-03, -1.38E-03, -1.38E-03, -1.32E-03, -2.58E-03, -0.960E-03],
+                        b_soil = [4.74, 4.74, 4.74, 6.77, 8.17, 10.73],
+                         K_sat = [29.7, 29.7, 29.7, 25.2, 13.9, 40.9],
+                         soilThetaMax = [0.12, 0.12, 0.12, 0.20, 0.3, 0.4])
+# PlantCH2OX = PlantCH2O(Site=SiteX,SoilLayers=SoilLayersX,CanopyGasExchange=CanopyGasExchangeX,BoundaryLayer=BoundLayerX,maxLAI=6.0,ksr_coeff=1000,SLA=0.030)
+PlantCH2OX = PlantCH2O(Site=SiteX,SoilLayers=SoilLayersX,CanopyGasExchange=CanopyGasExchangeX,BoundaryLayer=BoundLayerX,maxLAI=6.5,ksr_coeff=1500,SLA=0.02,sf=1.0,Psi_f=-5.0)
 PlantAllocX = PlantOptimalAllocation(Plant=PlantCH2OX,dWL_factor=1.02,dWR_factor=1.02)
 PlantX = PlantModuleCalculator(
     Site=SiteX,
@@ -405,7 +464,8 @@ zero_crossing_indices = [4,5,6]
 write_to_nc = True
 
 # Location/site of the simulations
-xsite = "Milgadara_2018_test"
+# xsite = "Milgadara_2018_test"
+xsite = "Rutherglen_1971_test"
 
 # Path for writing outputs to file
 filepath_write = "/Users/alexandernorton/ANU/Projects/DAESim/DAESIM/results/FAST/"
