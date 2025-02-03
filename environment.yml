@@ -14,7 +14,7 @@ dependencies:
   - pandas>=1.4.4
   - pip
   - pip:
-    - git+https://github.com/NortonAlex/DAESIM@48fbf04194a024852b3bbdeb4b5de286aed0bafd#egg=daesim
+    - git+https://github.com/NortonAlex/DAESIM@b543bb5aca34c32e1e5be91cfe4a22503244eb57#egg=daesim
   - scipy>=1.9.1
   - numpy
   - xarray
