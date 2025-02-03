@@ -436,7 +436,7 @@ zero_crossing_indices = [4,5,6]
 # filepath_write = "/Users/alexandernorton/ANU/Projects/DAESim/DAESIM/results/FAST/"
 
 # # Create input_data for model run
-# input_data = [ODEModelSolver, time_axis, forcing_inputs, reset_days, zero_crossing_indices]
+# input_data = [ODEModelSolver, time_axis, time_index, forcing_inputs, reset_days, zero_crossing_indices]
 
 # # Create output array for target variables
 # Mpx = []
@@ -482,7 +482,7 @@ xsite = "Rutherglen_1971_test"
 filepath_write = "/Users/alexandernorton/ANU/Projects/DAESim/DAESIM/results/FAST/"
 
 # Create input_data for model run
-input_data = [ODEModelSolver, time_axis, forcing_inputs, reset_days, zero_crossing_indices]
+input_data = [ODEModelSolver, time_axis, time_index, forcing_inputs, reset_days, zero_crossing_indices]
 
 # Create output array for target variables
 Mpx_column_headers = "nparamset,W_P_peakW,W_L_peakW,W_R_peakW,W_S_peakW,W_S_spike0,W_S_anth0,GPP_int_seas,NPP_int_seas,Rml_int_seas,Rmr_int_seas,Rg_int_seas,trflux_int_seas,FCstem2grain_int_seas,NPP2grain_int_seas,E_int_seas,LAI_peakW,W_spike_anth1,GY_mature,Sdpot_mature,GN_mature"   # to save as header in csv file. N.B. must match the custom output in the update_and_run_model function
@@ -523,27 +523,28 @@ np.savetxt(fname_target_variables, np.array(Mpx), delimiter=",")
 
 
 # %%
-# W_P_peakW = [Mpx[ipar][0] for ipar in range(len(Mpx))]
-# W_L_peakW = [Mpx[ipar][1] for ipar in range(len(Mpx))]
-# W_R_peakW = [Mpx[ipar][2] for ipar in range(len(Mpx))]
-# W_S_peakW = [Mpx[ipar][3] for ipar in range(len(Mpx))]
-# W_S_spike0 = [Mpx[ipar][4] for ipar in range(len(Mpx))]
-# W_S_anth0 = [Mpx[ipar][5] for ipar in range(len(Mpx))]
-# GPP_int_seas = [Mpx[ipar][6] for ipar in range(len(Mpx))]
-# NPP_int_seas = [Mpx[ipar][7] for ipar in range(len(Mpx))]
-# Rml_int_seas = [Mpx[ipar][8] for ipar in range(len(Mpx))]
-# Rmr_int_seas = [Mpx[ipar][9] for ipar in range(len(Mpx))]
-# Rg_int_seas = [Mpx[ipar][10] for ipar in range(len(Mpx))]
-# trflux_int_seas = [Mpx[ipar][11] for ipar in range(len(Mpx))]
-# FCstem2grain_int_seas = [Mpx[ipar][12] for ipar in range(len(Mpx))]
-# NPP2grain_int_seas = [Mpx[ipar][13] for ipar in range(len(Mpx))]
-# E_int_seas = [Mpx[ipar][14] for ipar in range(len(Mpx))]
-# LAI_peakW = [Mpx[ipar][15] for ipar in range(len(Mpx))]
-# W_spike_anth1 = [Mpx[ipar][16] for ipar in range(len(Mpx))]
-# GY_mature = [Mpx[ipar][17] for ipar in range(len(Mpx))]
-# Sdpot_mature = [Mpx[ipar][18] for ipar in range(len(Mpx))]
-# GN_mature = [Mpx[ipar][19] for ipar in range(len(Mpx))]
 
 # %%
+param_set = [Mpx[ipar][0] for ipar in range(len(Mpx))]
+W_P_peakW = [Mpx[ipar][1] for ipar in range(len(Mpx))]
+W_L_peakW = [Mpx[ipar][2] for ipar in range(len(Mpx))]
+W_R_peakW = [Mpx[ipar][3] for ipar in range(len(Mpx))]
+W_S_peakW = [Mpx[ipar][4] for ipar in range(len(Mpx))]
+W_S_spike0 = [Mpx[ipar][5] for ipar in range(len(Mpx))]
+W_S_anth0 = [Mpx[ipar][6] for ipar in range(len(Mpx))]
+GPP_int_seas = [Mpx[ipar][7] for ipar in range(len(Mpx))]
+NPP_int_seas = [Mpx[ipar][8] for ipar in range(len(Mpx))]
+Rml_int_seas = [Mpx[ipar][9] for ipar in range(len(Mpx))]
+Rmr_int_seas = [Mpx[ipar][10] for ipar in range(len(Mpx))]
+Rg_int_seas = [Mpx[ipar][11] for ipar in range(len(Mpx))]
+trflux_int_seas = [Mpx[ipar][12] for ipar in range(len(Mpx))]
+FCstem2grain_int_seas = [Mpx[ipar][13] for ipar in range(len(Mpx))]
+NPP2grain_int_seas = [Mpx[ipar][14] for ipar in range(len(Mpx))]
+E_int_seas = [Mpx[ipar][15] for ipar in range(len(Mpx))]
+LAI_peakW = [Mpx[ipar][16] for ipar in range(len(Mpx))]
+W_spike_anth1 = [Mpx[ipar][17] for ipar in range(len(Mpx))]
+GY_mature = [Mpx[ipar][18] for ipar in range(len(Mpx))]
+Sdpot_mature = [Mpx[ipar][19] for ipar in range(len(Mpx))]
+GN_mature = [Mpx[ipar][20] for ipar in range(len(Mpx))]
 
 # %%
