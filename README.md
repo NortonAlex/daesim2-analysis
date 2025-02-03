@@ -8,13 +8,21 @@ References: Taghikhah et al. (2022) https://doi.org/10.1016/j.ecolmodel.2022.109
 
 ## Installation
 
-TODO
+To install and run the DAESIM2 Analysis package on your local machine, you must download it, install it and then set up the environment. To download, click on the green "Code" button and follow your download method of choice. Alternatively, you can clone the repository from the command line with the following:
 
-### Installing tools on Mac
+```sh
+git clone https://github.com/NortonAlex/daesim2_analysis.git
+```
 
-TODO
+Then, change into the newly created directory with `cd daesim2-analysis`. 
 
-## Getting started
+Before proceeding further, ensure you have the necessary dependencies. For Mac and Linux users:
+
+* Mac: Install Homebrew (if not already installed)
+* Install Conda (via Miniconda or Anaconda)
+* Initialize Conda for shell use
+
+Once they are installed, you can proceed with the installation steps below. 
 
 Make your conda environment called `daesim2-analysis` using the environment.yml file and the command:
 
@@ -59,55 +67,55 @@ This separation benefits both model users and developers:
 
 If the DAESIM2 biophysical model (linked via GitHub) has been updated or if you want to reference a difference version of the model, the following steps must be followed to ensure those changes are properly integrated into `daesim2-analysis`:
 
-1. Get DAESIM2 commit hash
+1. Get [DAESIM2](https://github.com/NortonAlex/DAESIM) commit hash
 
-	Note the GitHub commit hash of the DAESIM2 version that you want to integrate 
+	Note the GitHub commit hash of the DAESIM2 version that you want to integrate
 
 2. Update the dependencies in daesim2-analysis
 
-	2.1 Update environment.yml
+	2.1 Update `environment.yml`
 
-		Locate the - pip: section in environment.yml and update the git URL reference with the new commit hash.
+	Locate the `- pip:` section in `environment.yml` and update the git URL reference with the new commit hash.
 
-  	2.2 Update setup.cfg
+  	2.2 Update `setup.cfg`
 
-		Locate the install_requires section within the setup.cfg file and update the git URL reference with the new commit hash. 
+	Locate the `install_requires` section within the `setup.cfg` file and update the git URL reference with the new commit hash. 
 
 3. Update the Conda Environment
 
 	Option 1: Update the Existing Environment (Recommended)
 
-		Run the following command:
+	Run the following command:
 
-```sh
-conda env update --file environment.yml --prune
-```
+	```sh
+	conda env update --file environment.yml --prune
+	```
 
-		This will update the environment while keeping existing dependencies intact.
+	This will update the environment while keeping existing dependencies intact.
 
 	Option 2: Recreate the Environment (If Issues Occur)
 
-		Sometimes, conda env update does not reflect the new changes and the environment must be removed and created again:
+	Sometimes, conda env update does not reflect the new changes and the environment must be removed and created again:
 
-```sh
-conda env remove -n daesim2-analysis
-conda env create -f environment.yml
-conda activate daesim2-analysis
-```
+	```sh
+	conda env remove -n daesim2-analysis
+	conda env create -f environment.yml
+	conda activate daesim2-analysis
+	```
 
 4. Reinstall the Package
 
-		After updating dependencies, reinstall `daesim2-analysis` to ensure the latest changes are recognized:
+	After updating dependencies, reinstall `daesim2-analysis` to ensure the latest changes are recognized:
 
-```sh
-pip install -e .
-```
+	```sh
+	pip install -e .
+	```
 
-		To force the latest GitHub dependency installation:
+	To force the latest GitHub dependency installation:
 
-```sh
-pip install --force-reinstall git+https://github.com/NortonAlex/DAESIM@<new-commit-hash>#egg=daesim
-```
+	```sh
+	pip install --force-reinstall git+https://github.com/NortonAlex/DAESIM@<new-commit-hash>#egg=daesim
+	```
 
 5. Verify the Update
 
@@ -117,23 +125,23 @@ pip install --force-reinstall git+https://github.com/NortonAlex/DAESIM@<new-comm
 
 	Try importing the packages:
 
-```sh
-import daesim
-import daesim2_analysis
-```
+	```sh
+	import daesim
+	import daesim2_analysis
+	```
 
 	If there are issues, verify the installed package versions:
 
-```sh
-pip list | grep daesim
-```
+	```sh
+	pip list | grep daesim
+	```
 
 	If any errors occur, consider clearing the pip cache and reinstalling:
 
-```sh
-pip cache purge
-pip install -e .
-```
+	```sh
+	pip cache purge
+	pip install -e .
+	```
 
 ## General guidance on working in this repository
 
