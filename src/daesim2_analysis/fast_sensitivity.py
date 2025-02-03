@@ -110,8 +110,8 @@ def run_model_and_get_outputs(Plant, ODEModelSolver, time_axis, time_index, forc
     # Carbon and Water
     W_P_peakW = total_carbon_t[itax_peakbiomass_exclseed]/Plant.PlantCH2O.f_C    # Total dry biomass at peak biomass
     W_L_peakW = res["y"][Plant.PlantDev.ileaf,itax_peakbiomass_exclseed]/Plant.PlantCH2O.f_C    # Leaf dry biomass at peak biomass
-    W_S_peakW = res["y"][Plant.PlantDev.iroot,itax_peakbiomass_exclseed]/Plant.PlantCH2O.f_C    # Stem dry biomass at peak biomass
-    W_R_peakW = res["y"][Plant.PlantDev.istem,itax_peakbiomass_exclseed]/Plant.PlantCH2O.f_C    # Root dry biomass at peak biomass
+    W_S_peakW = res["y"][Plant.PlantDev.istem,itax_peakbiomass_exclseed]/Plant.PlantCH2O.f_C    # Stem dry biomass at peak biomass
+    W_R_peakW = res["y"][Plant.PlantDev.iroot,itax_peakbiomass_exclseed]/Plant.PlantCH2O.f_C    # Root dry biomass at peak biomass
     if Plant.Management.cropType == "Wheat":
         ip = np.where(diagnostics['idevphase'][itax_phase_transitions] == Plant.PlantDev.phases.index('spike'))[0][0]
         W_S_spike0 = res["y"][Plant.PlantDev.istem,itax_phase_transitions[ip]]/Plant.PlantCH2O.f_C    # Stem dry biomass at start of spike
