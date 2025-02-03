@@ -126,7 +126,7 @@ def run_model_and_get_outputs(Plant, ODEModelSolver, time_axis, time_index, forc
     FCstem2grain_int_seas = np.sum(diagnostics['F_C_stem2grain'][itax_sowing:itax_mature+1])    # Total (integrated) remobilisation to grain
     _Cflux_NPP2grain = diagnostics['u_Seed'] * diagnostics['NPP']    # NPP carbon allocation flux to grain
     NPP2grain_int_seas = np.sum(_Cflux_NPP2grain[itax_sowing:itax_mature+1])    # Total (integrated) NPP carbon allocation to grain
-    E_int_seas = np.sum(diagnostics['E_mmd'][itax_sowing:itax_mature+1])    # Total (integrated) seasonal transpiration
+    E_int_seas = np.nansum(diagnostics['E_mmd'][itax_sowing:itax_mature+1])    # Total (integrated) seasonal transpiration
     LAI_peakW = diagnostics['LAI'][itax_peakbiomass_exclseed]    # Leaf area index at peak biomass
     
     # Grain Production
