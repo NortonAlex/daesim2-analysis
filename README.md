@@ -18,15 +18,21 @@ TODO
 
 Make your conda environment called `daesim2-analysis` using the environment.yml file and the command:
 
-$ conda env create --name daesim2-analysis --file environment.yml
+```sh
+conda env create --name daesim2-analysis --file environment.yml
+```
 
 Then, you can activate your new environment with the command:
 
-$ conda activate daesim2-analysis
+```sh
+conda activate daesim2-analysis
+```
 
-Now you have created the conda virtual environment to work in, we must install the package. To install the package use the command:
+Now you have created the conda virtual environment to work in, you must install the package. To install the package use the command:
 
-$ pip install -e .
+```sh
+pip install -e .
+```
 
 Hopefully everything installed successfully. 
 
@@ -34,29 +40,102 @@ You can now run the code or open a jupyter notebook to start testing. To open a 
 
 Once you're finished, you can deactivate the conda environment with the command:
 
-$ conda deactivate
+```sh
+conda deactivate
+```
 
-### Why do we use Anaconda?
+### Linking to the DAESIM2 GitHub repository
 
-There are benefits to using Anaconda rather than just using pip. As discussed in this article (https://pythonspeed.com/articles/conda-vs-pip/) the main benefits are portability and reproducibility.
-- Portability across operating systems: Instead of installing Python in three different ways on Linux, macOS, and Windows, you can use the same environment.yml on all three.
-- Reproducibility: It’s possible to pin almost the whole stack, from the Python interpreter upwards.
-- Consistent configuration: You don’t need to install system packages and Python packages in two different ways; (almost) everything can go in one file, the environment.yml.
+This repository is linked to the DAESIM2 biophysical model source code [DAESIM2](https://github.com/NortonAlex/DAESIM). The analysis tools are kept separate from the biophysical model code for better organization and maintainability. Keeping them independent prevents unnecessary complexity in the model codebase and ensures that the analysis tools can evolve separately without impacting core model functionality.
 
-Using Conda also addresses another problem: How to deal with Python libraries that require compiled code? At some point we may like to convert some of the DAESim source code into another, more computationally efficient language (e.g. C++ or Fortran) so that we can run larger simulations. If we decide to do that we will need to compile the source code in a language other than Python, in which case pip would be insufficient and Conda will be required. 
+This separation benefits both model users and developers:
 
-### Linking to the DAESIM2 github repository
+* Users can run and interact with the DAESIM2 model without needing to understand or install additional analysis tools (including their specialized Python libraries).
 
-This toolkit of helper functions and examples is kept independent from the source code of the DAESIM2 biophysical model. This keeps things tidier and prevents possible ballooning of the code base size that must be maintained. It is useful to keep the biophysical model independent from these tools as we want users to be able to go in and run the model without having to understand or get lost in the rest of the analysis support tools e.g. calibration, sensitivity analysis, uncertainty analysis. In addition, the analysis tools here require specific python libraries that we don't want the biophysical model code base to have dependencies on. 
+* Developers can work on analysis tasks (e.g., calibration, sensitivity analysis, uncertainty analysis) without interfering with the core model implementation, also allowing for a stable reference to DAESIM2 model versions.
 
-### Why do I only see `.py` files in the `notebooks` directory?
 
-Tracking notebooks is a pain because of all the extra metadata that is in them.
-As a result, we use [jupytext](https://jupytext.readthedocs.io/).
-This allows us to track clean `.py` files while keeping all the power of jupyter notebooks.
-You'll notice that we ignore `*.ipynb` in our `.gitignore`.
+#### Updating the Environment and Dependencies
 
-Thanks to jupytext, you can just click on the `.py` files and they will open like standard notebooks.
+If the DAESIM2 biophysical model (linked via GitHub) has been updated or if you want to reference a difference version of the model, the following steps must be followed to ensure those changes are properly integrated into `daesim2-analysis`:
+
+1. Get DAESIM2 commit hash
+
+Note of the GitHub commit hash of the DAESIM2 version that you want to integrate 
+
+2. Update the dependencies in daesim2-analysis
+
+2.1 Update environment.yml
+
+Locate the - pip: section in environment.yml and update the git URL reference with the new commit hash.
+
+2.2 Update setup.cfg
+
+Locate the install_requires section within the setup.cfg file and update the git URL reference with the new commit hash. 
+
+3. Update the Conda Environment
+
+After modifying environment.yml, update the Conda environment:
+
+Option 1: Update the Existing Environment (Recommended)
+
+Run the following command:
+
+```sh
+conda env update --file environment.yml --prune
+```
+
+This will update the environment while keeping existing dependencies intact.
+
+Option 2: Recreate the Environment (If Issues Occur)
+
+Sometimes, conda env update does not reflect the new changes and the environment must be removed and created again:
+
+```sh
+conda env remove -n daesim2-analysis
+conda env create -f environment.yml
+conda activate daesim2-analysis
+```
+
+4. Reinstall the Package
+
+After updating dependencies, reinstall `daesim2-analysis` to ensure the latest changes are recognized:
+
+```sh
+pip install -e .
+```
+
+To force the latest GitHub dependency installation:
+
+```sh
+pip install --force-reinstall git+https://github.com/NortonAlex/DAESIM@<new-commit-hash>#egg=daesim
+```
+
+5. Verify the Update
+
+To ensure everything is correctly installed:
+
+Open a Python shell or Jupyter Notebook.
+
+Try importing the packages:
+
+```sh
+import daesim
+import daesim2_analysis
+```
+
+If there are issues, verify the installed package versions:
+
+```sh
+pip list | grep daesim
+```
+
+If any errors occur, consider clearing the pip cache and reinstalling:
+
+```sh
+pip cache purge
+pip install -e .
+```
 
 ## General guidance on working in this repository
 
@@ -76,7 +155,25 @@ If you need support, the first place to go is the [issue tracker] (todo: link th
 From there, you can tag other model users to ask for help.
 As a second step, reach out directly to your collaborators.
 
-## Other helpful snippets
+## Other helpful background
+
+### Why do we use Anaconda?
+
+There are benefits to using Anaconda rather than just using pip. As discussed in this article (https://pythonspeed.com/articles/conda-vs-pip/) the main benefits are portability and reproducibility.
+- Portability across operating systems: Instead of installing Python in three different ways on Linux, macOS, and Windows, you can use the same environment.yml on all three.
+- Reproducibility: It’s possible to pin almost the whole stack, from the Python interpreter upwards.
+- Consistent configuration: You don’t need to install system packages and Python packages in two different ways; (almost) everything can go in one file, the environment.yml.
+
+Using Conda also addresses another problem: How to deal with Python libraries that require compiled code? At some point we may like to convert some of the DAESIM2 source code into another, more computationally efficient language (e.g. C++ or Fortran) so that we can run larger simulations. If we decide to do that we will need to compile the source code in a language other than Python, in which case pip would be insufficient and Conda will be required. 
+
+### Why do I only see `.py` files in the `notebooks` directory?
+
+Tracking notebooks is a pain because of all the extra metadata that is in them.
+As a result, we use [jupytext](https://jupytext.readthedocs.io/).
+This allows us to track clean `.py` files while keeping all the power of jupyter notebooks.
+You'll notice that we ignore `*.ipynb` in our `.gitignore`.
+
+Thanks to jupytext, you can just click on the `.py` files and they will open like standard notebooks.
 
 ### Checking out a branch related to a merge request
 
