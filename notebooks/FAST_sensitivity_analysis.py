@@ -5,7 +5,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.16.6
+#       jupytext_version: 1.16.7
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -62,7 +62,7 @@ from daesim.leafgasexchange2 import LeafGasExchangeModule2
 from daesim.canopygasexchange import CanopyGasExchange
 from daesim.plantcarbonwater import PlantModel as PlantCH2O
 from daesim.plantallocoptimal import PlantOptimalAllocation
-from daesim.utils import ODEModelSolver
+from daesim.utils import ODEModelSolver, daesim_io_write_diag_to_nc
 
 ## DAESIM2 Analysis
 from daesim2_analysis import fast_sensitivity as fastsa
@@ -376,7 +376,7 @@ SoilLayersX = SoilLayers(nlevmlsoil=6,z_max=0.66,z_top=0.10,discretise_method="h
                          soilThetaMax = [0.12, 0.12, 0.12, 0.20, 0.3, 0.4])
 # PlantCH2OX = PlantCH2O(Site=SiteX,SoilLayers=SoilLayersX,CanopyGasExchange=CanopyGasExchangeX,BoundaryLayer=BoundLayerX,maxLAI=6.0,ksr_coeff=1000,SLA=0.030)
 PlantCH2OX = PlantCH2O(Site=SiteX,SoilLayers=SoilLayersX,CanopyGasExchange=CanopyGasExchangeX,BoundaryLayer=BoundLayerX,maxLAI=6.5,ksr_coeff=1500,SLA=0.02,sf=1.0,Psi_f=-5.0)
-PlantAllocX = PlantOptimalAllocation(Plant=PlantCH2OX,dWL_factor=1.02,dWR_factor=1.02)
+PlantAllocX = PlantOptimalAllocation(Plant=PlantCH2OX)
 PlantX = PlantModuleCalculator(
     Site=SiteX,
     Management=ManagementX,
@@ -429,8 +429,9 @@ zero_crossing_indices = [4,5,6]
 
 # # # Location/site of the simulations
 # # xsite = "Milgadara_2021_test_single"
-# xsite = "Rutherglen_1971_test_single"
-
+# xsite = "Rutherglen_1971_test2_single"
+# title = "DAESIM2-Plant FAST Sensitivity Analysis: "+xsite
+# description = "DAESIM2-Plant FAST sensitivity analysis for the site " + xsite
 
 # # Path for writing outputs to file
 # filepath_write = "/Users/alexandernorton/ANU/Projects/DAESim/DAESIM/results/FAST/"
@@ -466,7 +467,12 @@ zero_crossing_indices = [4,5,6]
 #     # File name for writing outputs to file
 #     filename_write = f"FAST_results_{xsite}_paramset{nparamset:0{nsigfigures}}.nc"
 #     paramset = param_values[iparamset]
-#     fastsa.write_diagnostics_to_nc(PlantX, diagnostics, filepath_write, filename_write, time_axis, time_nday_f, time_year_f, time_doy_f, problem, paramset)
+#     daesim_io_write_diag_to_nc(PlantX, diagnostics, 
+#                                    filepath_write, filename_write, 
+#                                    time_index,
+#                                    problem=problem,
+#                                    param_values=paramset,
+#                                    nc_attributes={"title": title, "description": description})
 
 
 # %%
@@ -477,6 +483,8 @@ write_to_nc = True
 # Location/site of the simulations
 # xsite = "Milgadara_2018_test"
 xsite = "Rutherglen_1971_test"
+title = "DAESIM2-Plant FAST Sensitivity Analysis: "+xsite
+description = "DAESIM2-Plant FAST sensitivity analysis for the site " + xsite
 
 # Path for writing outputs to file
 filepath_write = "/Users/alexandernorton/ANU/Projects/DAESim/DAESIM/results/FAST/"
@@ -515,7 +523,13 @@ for iparamset in range(nsamples):
         # File name for writing outputs to file
         filename_write = f"FAST_results_{xsite}_paramset{nparamset:0{nsigfigures}}.nc"
         paramset = param_values[iparamset]
-        fastsa.write_diagnostics_to_nc(PlantX, diagnostics, filepath_write, filename_write, time_axis, time_nday_f, time_year_f, time_doy_f, problem, paramset)
+        # fastsa.write_diagnostics_to_nc(PlantX, diagnostics, filepath_write, filename_write, time_axis, time_nday_f, time_year_f, time_doy_f, problem, paramset)
+        daesim_io_write_diag_to_nc(PlantX, diagnostics, 
+                                   filepath_write, filename_write, 
+                                   time_index,
+                                   problem=problem,
+                                   param_values=paramset,
+                                   nc_attributes={"title": title, "description": description})
 
 # Write the target variables data to a csv file
 fname_target_variables = f"{filepath_write}FAST_results_{xsite}_target_variables.csv"
