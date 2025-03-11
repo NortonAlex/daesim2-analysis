@@ -1,5 +1,4 @@
 # Core dependencies
-python>=3.9
 numpy
 scipy>=1.9.1
 matplotlib>=2.2.5
@@ -14,7 +13,7 @@ ipython
 jupyter
 jupytext
 notebook
-nb_black
+#nb_black
 
 # Git-based dependency
 daesim @ git+https://github.com/NortonAlex/DAESIM@6b850301bb0e105071208134ad9f03a77881f89f#egg=daesim
