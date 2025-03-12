@@ -52,6 +52,84 @@ Once you're finished, you can deactivate the conda environment with the command:
 conda deactivate
 ```
 
+### Installation - Without Anaconda:
+
+In some environments, Anaconda (conda) may not be available for managing Python environments. This is often the case on high-performance computing (HPC) systems such as NCI's Gadi, where Python environments must be manually configured using system modules and pip.
+
+The following instructions outline how to install and run the DAESIM2 Analysis package using a Python virtual environment (venv) instead of Anaconda. First, you must load the required python module. At the time of writing, the required version is Python 3.9.2. On NCI's Gadi, load the correct module with: 
+
+```sh
+module load python3/3.9.2
+```
+
+If you are not using NCI, check your system’s Python version:
+
+```sh
+python3 --version
+```
+
+If your system does not have Python 3.9+, install it using your package manager:
+
+* Ubuntu/Debian: sudo apt install python3 python3-venv python3-pip
+* CentOS/RHEL: sudo yum install python3 python3-venv python3-pip
+* MacOS: brew install python (if using Homebrew)
+
+Then, to download `daesim2-analysis`, clone the repository to your desired directory from the command line with:
+
+```sh
+git clone https://github.com/NortonAlex/daesim2_analysis.git
+```
+
+Then, navigate to the newly created directory with `cd daesim2-analysis`. Next, to isolate dependencies, you must create a Python virtual environment (venv). On NCI Gadi, store the venv in /g/data or /scratch to avoid exceeding home directory quotas: 
+
+```sh
+python3 -m venv /g/data/$projectid/$userid/venv-daesim2-analysis
+```
+
+For general systems, you can create the venv in your project directory:
+
+```sh
+python3 -m venv venv-daesim2-analysis
+```
+
+Activate the new venv in the current session (note the leading "dot-space" `. ` to source the file into the current shell environment, used as a POSIX-standard command instead of the typical `source` which is specific to selected shells e.g. bash, zsh):
+
+```sh
+. /g/data/$projectid/$userid/venv-daesim2-analysis/bin/activate
+```
+
+Once activated, it is also recommended to update the pip and setuptools packages:
+
+```sh
+pip install -U pip setuptools
+```
+
+With the virtual environment activated, install the required dependencies listed in requirements.txt: 
+
+```sh
+pip install -r requirements.txt
+```
+
+Finally, to install daesim2-analysis as an editable package (allowing for easy development and updates), run: 
+
+```sh
+pip install -e .
+```
+
+Hopefully everything installed successfully. You can verify that everything is working by running:
+
+```sh
+python -c "import daesim2_analysis; print('Installation successful')"
+```
+
+You can now run the code or open a jupyter notebook to start testing. 
+
+Once you're finished, you can deactivate the venv with the command:
+
+```sh
+deactivate
+```
+
 ### Linking to the DAESIM2 GitHub repository
 
 This repository is linked to the DAESIM2 biophysical model source code [DAESIM2](https://github.com/NortonAlex/DAESIM). The analysis tools are kept separate from the biophysical model code for better organization and maintainability. Keeping them independent prevents unnecessary complexity in the model codebase and ensures that the analysis tools can evolve separately without impacting core model functionality.
