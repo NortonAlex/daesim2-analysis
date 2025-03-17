@@ -427,6 +427,5 @@ for n_run in range(n_runs):
       print(iparamsets_per_run[n_run])
       results = pool.map(evaluate_paramset, iparamsets_per_run[n_run])
       Mpx += results
-      break
   
 np.save(path_Mpx, np.array(Mpx))
