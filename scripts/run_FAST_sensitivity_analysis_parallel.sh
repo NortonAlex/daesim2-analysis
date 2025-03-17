@@ -1,19 +1,17 @@
 #!/bin/bash
 #PBS -N daesim2analysis
+#PBS -l mem=24GB
+#PBS -l ncpus=24
+#PBS -l jobfs=24GB
 #PBS -P xe2
-#PBS -q express
-#PBS -l mem=12GB
-#PBS -l jobfs=3GB
-#PBS -l ncpus=3
-#PBS -l walltime=00:30:00
-#PBS -l storage=gdata/xe2
-#PBS -o /home/272/ya6227/daesim2-analysis/deployment/outputs/output.log
-#PBS -e /home/272/ya6227/daesim2-analysis/deployment/outputs/error.log
+#PBS -l walltime=10:00:00
+#PBS -l storage=gdata/xe2+gdata/v10+gdata/ka08
+#PBS -q normal
 
-wd=/home/y/daesim2-analysis-parallel
+wd=/home/272/ya6227/daesim2-analysis
 source /g/data/xe2/ya6227/daesim2-analysis-env/bin/activate
-
-n_processes=32
+cd $wd
+n_processes=24
 n_samples=600
 dir_results=/g/data/xe2/ya6227/daesim2-analysis-data/FAST_results
 path_df_forcing_1=/g/data/xe2/ya6227/daesim2-analysis-data/DAESim_forcing_data/Rutherglen_1971.csv

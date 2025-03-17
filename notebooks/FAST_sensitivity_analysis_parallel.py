@@ -135,7 +135,7 @@ if not IS_INTERACTIVE:
 else:
   n_processes       : int = 4
   n_samples         : int = 600
-  dir_results       : str = '/g/data/xe2/ya6227/daesim2-analysis-data'
+  dir_results       : str = '/g/data/xe2/ya6227/daesim2-analysis-data/FAST_results'
   paths_df_forcing  : list[str] = ['/g/data/xe2/ya6227/daesim2-analysis-data/DAESim_forcing_data/Rutherglen_1971.csv']
 
 # xsite = '-'.join(xsites)
@@ -143,11 +143,10 @@ xsite = '-'.join([path.split('/')[-1].split('.')[0] for path in paths_df_forcing
 title = ' '.join(['DAESIM2-Plant FAST Sensitivity Analyssis', xsite])
 description = title
 dir_xsite_FAST_results = '/'.join([dir_results, xsite])
-dir_xsite_parameters = '/'.join([dir_xsite_FAST_results, 'parameters'])
+dir_xsite_parameters = '/'.join([dir_xsite_FAST_results, 'parameters/'])
 path_Mpx = '/'.join([dir_xsite_FAST_results, 'Mpx.npy'])
 makedirs(dir_xsite_FAST_results, exist_ok=True)
 makedirs(dir_xsite_parameters, exist_ok=True)
-print(dir_xsite_parameters)
 
 # %%
 ## Parameters
