@@ -1,0 +1,13 @@
+
+======================================================================================
+                  Resource Usage on 2025-03-17 16:06:44:
+   Job Id:             137133878.gadi-pbs
+   Project:            xe2
+   Exit Status:        1
+   Service Units:      78.07
+   NCPUs Requested:    24                     NCPUs Used: 24              
+                                           CPU Time Used: 35:24:15        
+   Memory Requested:   24.0GB                Memory Used: 1.45GB          
+   Walltime requested: 10:00:00            Walltime Used: 01:37:35        
+   JobFS requested:    24.0GB                 JobFS used: 0B              
+======================================================================================
