@@ -4,32 +4,48 @@ from dataclasses import dataclass
 from dataclasses import fields
 from dataclasses import field
 from hashlib import sha256
+from pandas import DataFrame
 
 @dataclass(frozen=True)
 class Parameters:
-  paths           : list[str]
-  modules         : list[str]
-  names           : list[str]
-  units           : list[str]
-  init            : list[float]
-  min             : list[float]
-  max             : list[float]
-  phase_specific  : list[bool]
-  phase           : list[str]
+  paths           : list[str]   = field(metadata={'label': 'Module Path'})
+  modules         : list[str]   = field(metadata={'label': 'Module'})
+  names           : list[str]   = field(metadata={'label': 'Name'})
+  units           : list[str]   = field(metadata={'label': 'Unit'})
+  init            : list[float] = field(metadata={'label': 'Initial Value'})
+  min             : list[float] = field(metadata={'label': 'Min'})
+  max             : list[float] = field(metadata={'label': 'Max'})
+  phase_specific  : list[bool]  = field(metadata={'label': 'Phase Specific'})
+  phase           : list[str]   = field(metadata={'label': 'Phase'})
 
-  __iter__ = lambda s: ((f.name, getattr(s, f.name)) for f in fields(s))
-  lengths  = property(lambda s: {name:len(value) for name, value in s})
-  avg_length = property(lambda s: sum([s.lengths[name] for name in s.lengths]) / len(s.lengths))
-  consistent_length = property(lambda s: s.lengths['paths'] - s.avg_length == 0)
-  __str__ = lambda s: ' '.join(['-'.join([name, str(value)]) for name, value in s])
-  __sha256__ = property(lambda s: sha256(s.__str__().encode()).hexdigest())
-  unique_id = property(lambda s: s.__sha256__)
+  df              : DataFrame   = field(init=False)
+  problem         : dict        = field(init=False)
+  
+  __iter__          = lambda s: iter(((f.name, f.metadata.get('label', f.name), getattr(s, f.name)) for f in fields(s) if f.init == True))
 
+  make_df           = lambda s: DataFrame({label: value for _, label, value in s})
+  make_problem      = lambda s: {
+                        'num_vars': len(s.df),
+                        'names': s.df['Name'].values,
+                        'bounds': [[row['Min'], row['Max']] for _, row in s.df.iterrows()]
+                    }
+
+  lengths           = property(lambda s: {label:len(value) for _, label, value in s})
+  avg_length        = property(lambda s: sum([s.lengths[name] for name in s.lengths]) / len(s.lengths))
+  consistent_length = property(lambda s: s.lengths['Module Path'] - s.avg_length == 0)
+  __sha256__        = property(lambda s: sha256(s.__str__().encode()).hexdigest())
+  unique_id         = property(lambda s: s.__sha256__)
+
+  
+ 
   def __post_init__(s: Self):
     if not s.consistent_length:
       raise ValueError(
         f'All lists must be of the same length, but got lengths: {s.lengths}'
       )
+    
+    object.__setattr__(s, 'df', s.make_df())
+    object.__setattr__(s, 'problem', s.make_problem())
 
 def t():
   p = Parameters(
@@ -43,7 +59,6 @@ def t():
     phase_specific  = [False, False, False, False, False, False, False, True, True, False, False, False, False],
     phase           = [None, None, None, None, None, None, None, "vegetative", "grainfill", None, None, None, None]
   )
-  print(p.unique_id)
 
 
 if __name__ == '__main__':
