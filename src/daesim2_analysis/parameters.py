@@ -8,7 +8,6 @@ from pandas import DataFrame
 from hashlib import sha256
 import json
 
-
 @dataclass(frozen=True)
 class Parameters:
     paths             : list[str]   = field(metadata={'label': 'Module Path'})
@@ -31,6 +30,7 @@ class Parameters:
                         'names': s.df['Name'].values,
                         'bounds': [[row['Min'], row['Max']] for _, row in s.df.iterrows()]
                         }
+    __str__           = lambda s: str(s.df)
 
     lengths           = property(lambda s: {label:len(value) for _, label, value in s})
     avg_length        = property(lambda s: sum([s.lengths[name] for name in s.lengths]) / len(s.lengths))
@@ -38,13 +38,14 @@ class Parameters:
     __sha256__        = property(lambda s: sha256(s.__str__().encode()).hexdigest())
     unique_id         = property(lambda s: s.__sha256__)
 
+
  
     def __post_init__(s: Self):
         if not s.consistent_length:
             raise ValueError(
                 f'All lists must be of the same length, but got lengths: {s.lengths}'
             )
-        
+
         object.__setattr__(s, 'df', s.make_df())
         object.__setattr__(s, 'problem', s.make_problem())
 
@@ -70,7 +71,6 @@ class Parameters:
         with open(filepath, 'r', encoding='utf-8') as f:
             data = json.load(f)
         return cls.__from_json__(data)
-    
 
 def test_init()->bool:
     p = Parameters(
@@ -98,18 +98,25 @@ def test_from_json():
         "Phase Specific": [False, False, False, False, False, False, False, True, True, False, False, False, False],
         "Phase": [None, None, None, None, None, None, None, "vegetative", "grainfill", None, None, None, None]
     }
+    p = Parameters.__from_json__(example_data)
     return True
 
 def test_from_file():
     p = Parameters.__from_file__('parameters/Fast1.json')
     return True
 
+def test_samples_generation():
+    p: Parameters = Parameters.__from_file__('parameters/Fast1.json')
+    samples = p.sample(100, 0)
+    return samples.shape == (p.avg_length * 100, p.avg_length)
+
 def t():
     return all(
         [
             test_init(),
             test_from_json(),
-            test_from_file()
+            test_from_file(),
+            test_samples_generation()
         ]
     )
 
