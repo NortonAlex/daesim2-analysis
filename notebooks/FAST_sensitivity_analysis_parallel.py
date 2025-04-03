@@ -47,11 +47,7 @@ from daesim2_analysis.parameters import Parameters
 args = Args.from_cli() if not is_interactive() else Args()
 
 # %%
-
 parameters = Parameters.__from_file__(args.path_parameters_file)
-print(parameters)
-print(args)
-
 
 # # Generate samples using the FAST method
 # num_samples = 300  # Number of samples to be generated

@@ -12,10 +12,10 @@ def is_interactive() -> bool: return hasattr(sys, 'ps1') or sys.flags.interactiv
 class Args:
     n_processes           : int = 4
     n_samples             : int = 100
-    dir_results           : str = '/g/data/xe2/ya6227/daesim2-analysis-data/FAST_results'
+    dir_results           : str = 'DAESIM_data/FAST_results'
     paths_df_forcing      : list[str] = field(
                                 default_factory = lambda:[
-                                '/g/data/xe2/ya6227/daesim2-analysis-data/DAESim_forcing_data/Rutherglen_1971.csv'
+                                    'DAESIM_data/DAESim_forcing_data/Rutherglen_1971.csv'
                                 ]
                             )
     path_parameters_file  : str = 'parameters/Fast1.json'

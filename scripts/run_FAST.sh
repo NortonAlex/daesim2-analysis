@@ -4,8 +4,8 @@ cd $wd
 
 n_processes=4
 n_samples=100
-dir_results=/g/data/xe2/ya6227/daesim2-analysis-data/FAST_results
-path_df_forcing_1=/g/data/xe2/ya6227/daesim2-analysis-data/DAESim_forcing_data/Rutherglen_1971.csv
+dir_results=results
+path_df_forcing_1=DAESIM_Data/DAESim_forcing_data/Rutherglen_1971.csv
 paths_df_forcing=("$path_df_forcing_1")
 path_parameters_file='parameters/Fast1.json'
 
