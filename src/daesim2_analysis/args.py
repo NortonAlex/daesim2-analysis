@@ -2,6 +2,8 @@ from argparse import ArgumentParser
 from typing_extensions import Self
 from dataclasses import dataclass
 from dataclasses import field
+from datetime import datetime
+from datetime import date
 from os.path import join
 from os import makedirs
 import sys
@@ -10,15 +12,16 @@ def is_interactive() -> bool: return hasattr(sys, 'ps1') or sys.flags.interactiv
 
 @dataclass(frozen=True)
 class Args:
-    n_processes           : int = 4
-    n_samples             : int = 100
-    dir_results           : str = 'DAESIM_data/FAST_results'
-    paths_df_forcing      : list[str] = field(
-                                default_factory = lambda:[
-                                    'DAESIM_data/DAESim_forcing_data/Rutherglen_1971.csv'
-                                ]
-                            )
-    path_parameters_file  : str = 'parameters/Fast1.json'
+    CLatDeg                 : str = -36.05
+    CLonDeg                 : str = 146.5
+    tz                      : int = 10
+    sowing_dates            : list[date] = field(default_factory=lambda: [date(year=1971, month=5, day=11)])
+    harvest_dates           : list[date] = field(default_factory=lambda: [date(year=1971, month=12, day=21)])
+    n_processes             : int = 1
+    n_samples               : int = 100
+    dir_results             : str = 'DAESIM_data/FAST_results'
+    paths_df_forcing        : list[str] = field(default_factory=lambda: ['DAESIM_data/DAESim_forcing_data/Rutherglen_1971.csv'])
+    path_parameters_file    : str = 'parameters/Fast1.json'
 
     xsite: str = field(init=False)
     title: str = field(init=False)
