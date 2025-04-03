@@ -1,46 +1,3 @@
-# ---
-# jupyter:
-#   jupytext:
-#     text_representation:
-#       extension: .py
-#       format_name: percent
-#       format_version: '1.3'
-#       jupytext_version: 1.16.6
-#   kernelspec:
-#     display_name: Python 3 (ipykernel)
-#     language: python
-#     name: python3
-# ---
-
-# %% [markdown]
-# # FAST Sensitivity Analysis
-#
-# Efficiency: 
-#
-# FAST uses a frequency-based sampling approach that transforms the sensitivity analysis into a spectral analysis problem. This allows it to estimate first-order and total-order sensitivity indices with fewer model evaluations compared to Sobol’ sequences, which rely on a large number of Monte Carlo-style simulations to achieve similar results.
-#
-# - Mechanism: FAST converts the multi-dimensional sensitivity problem into a one-dimensional function using a sinusoidal transformation, making it easier to extract sensitivity indices via Fourier transformations.
-# - Sample size: FAST typically requires far fewer model runs than Sobol’, especially as the number of parameters increases. For example, FAST might require on the order of hundreds of model evaluations, while Sobol’ sequences may require thousands to achieve the same level of accuracy.
-# - Higher-order interactions: While FAST is efficient at capturing first-order and total-order effects, its ability to handle higher-order interactions (i.e., interactions between more than two parameters) is more limited compared to Sobol’s method, which decomposes variance at multiple levels.
-#
-# Advantages:
-#
-# - Computational efficiency: FAST often requires fewer model runs to converge on reliable sensitivity indices, making it faster for large-scale models.
-# - Non-linearity: It is well-suited for models with strong non-linearities.
-# - Smaller sample size: Achieves good coverage of the parameter space with fewer samples compared to Sobol’.
-#
-# Disadvantages:
-#
-# - Handling interactions: While FAST can capture total-order sensitivity (including interactions), it may not fully distinguish between individual higher-order interactions (e.g., interactions between three or more parameters).
-# - Periodic inputs: FAST is better suited to continuous and periodic inputs, which can be a limitation if your model’s parameters are non-periodic or have unusual distributions.
-#
-# FAST is typically more computationally efficient than Sobol’ sequences for sensitivity analysis, especially when the focus is on first-order and total-order sensitivity indices. Sobol' sequences are more robust for detailed interaction analysis but are more resource-intensive.
-#
-# ### Step 1.  Install Required Libraries
-#
-# The main Python package for performing FAST is SALib (Sensitivity Analysis Library). If you don’t have it installed, you can install it via pip or conda. 
-
-# %%
 from SALib.sample import fast_sampler
 from SALib.analyze import fast
 
@@ -83,138 +40,19 @@ from os import makedirs
 from tqdm import tqdm
 from time import time
 
+from daesim2_analysis.args import Args
+from daesim2_analysis.args import is_interactive
 from daesim2_analysis.parameters import Parameters
 
-### Parse Arguments if running as python file
-## Argument Parsing
-def is_interactive():
-    """
-    Check if the script is running in an interactive environment.
-    """
-    try:
-        return hasattr(__main__, '__file__') == False
-    except AttributeError:
-        return True
-
-IS_INTERACTIVE = is_interactive()
-
-if not IS_INTERACTIVE:
-    parser = ArgumentParser()
-    group1 = parser.add_argument_group('Optimisation Arguments')
-    group1.add_argument(
-        '--n_processes',
-        type=int,
-        required=True,
-        help='number of processes to use for FAST SA'
-    )
-    group1.add_argument(
-        '--n_samples',
-        type=int,
-        required=True,
-        help='number of samples to generate for FAST SA'
-    )
-
-    group2 = parser.add_argument_group('File Arguments')
-    group1.add_argument(
-        '--dir_results',
-        type=str,
-        required=True,
-        help="Path to the directory for storing FAST SA results"
-    )
-    group2.add_argument(
-        '--paths_df_forcing',
-        type=str,
-        required=True,
-        help='path to the df forcing data csv'
-    )
-    group2.add_argument(
-       '--path_parameters_file',
-       type=str,
-       required=True,
-       help='path to the file containing parameters'
-    )
-
-    args = parser.parse_args()
-
-    n_processes          : int = args.n_processes
-    n_samples            : int = args.n_samples
-    dir_results          : str = args.dir_results
-    paths_df_forcing     : list[str] = args.paths_df_forcing.split(',')
-    path_parameters_file : str = args.path_parameters_file
-
-else:
-    n_processes         : int = 4
-    n_samples           : int = 600
-    dir_results         : str = '/g/data/xe2/ya6227/daesim2-analysis-data/FAST_results'
-    paths_df_forcing    : list[str] = ['/g/data/xe2/ya6227/daesim2-analysis-data/DAESim_forcing_data/Rutherglen_1971.csv']
-    path_parameters_file: str = 'parameters/Fast1.json'
-
-# xsite = '-'.join(xsites)
-xsite = '-'.join([path.split('/')[-1].split('.')[0] for path in paths_df_forcing])
-title = ' '.join(['DAESIM2-Plant FAST Sensitivity Analyssis', xsite])
-description = title
-dir_xsite_FAST_results = '/'.join([dir_results, xsite])
-dir_xsite_parameters = '/'.join([dir_xsite_FAST_results, 'parameters/'])
-path_Mpx = '/'.join([dir_xsite_FAST_results, 'Mpx.npy'])
-makedirs(dir_xsite_FAST_results, exist_ok=True)
-makedirs(dir_xsite_parameters, exist_ok=True)
+args = Args.from_cli() if not is_interactive() else Args()
 
 # %%
 
-parameters = Parameters.__from_file__(path_parameters_file)
-## Parameters
-# parameter_modulepath = ["PlantCH2O.CanopyGasExchange.Leaf", "PlantCH2O.CanopyGasExchange.Leaf", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantDev", "PlantDev", "", "", "", ""]
-# parameter_module = ["Leaf", "Leaf", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantDev", "PlantDev", "", "", "", ""]
-# parameter_names  = ["Vcmax_opt", "g1", "SLA", "maxLAI", "ksr_coeff", "Psi_f", "sf", "gdd_requirements", "gdd_requirements", "GY_FE", "GY_SDW_50", "CI", "d_r_max"]
-# parameter_units  = ["mol CO2 m-2 s-1", "kPa^0.5", "m2 g d.wt-1", "m2 m-2", "g d.wt-1 m-1", "MPa", "MPa-1", "deg C d", "deg C d", "thsnd grains g d.wt spike-1", "g d.wt m-2", "-", "m"]
-# parameter_init   = [60e-6, 3, 0.03, 6, 1000, -3.5, 3.5, 900, 650, 0.1, 100, 0.75, 0.5]
-# parameter_min    = [30e-6, 1, 0.015, 5, 300, -8.0, 1.5, 600, 350, 0.08, 80, 0.5, 0.15]
-# parameter_max    = [120e-6, 6, 0.035, 7, 5000, -1.0, 7.0, 1800, 700, 0.21, 150, 1.0, 0.66]
-# parameter_phase_specific = [False, False, False, False, False, False, False, True, True, False, False, False, False]
-# parameter_phase = [None, None, None, None, None, None, None, "vegetative", "grainfill", None, None, None, None]
+parameters = Parameters.__from_file__(args.path_parameters_file)
+print(parameters)
+print(args)
 
-# # %%
-# # Check if all parameter vectors have the same length
-# lengths = [len(parameter_modulepath), len(parameter_module), len(parameter_names), len(parameter_units), len(parameter_init), len(parameter_min), len(parameter_max)]
-# # Print result of the length check
-# if all(length == lengths[0] for length in lengths):
-#     print("All parameter vectors are of the same length.")
-# else:
-#     print("The parameter vectors are not of the same length. Lengths found:", lengths)
-    
-# # Create a dataframe to combine the parameter information into one data structure
-# parameters_df = pd.DataFrame({
-#     "Module Path": parameter_modulepath,
-#     "Module": parameter_module,
-#     "Phase Specific": parameter_phase_specific,
-#     "Phase": parameter_phase,
-#     "Name": parameter_names,
-#     "Units": parameter_units,
-#     "Initial Value": parameter_init,
-#     "Min": parameter_min,
-#     "Max": parameter_max
-# })
 
-# # Dictionary required as input to SALib FAST sampler
-# problem = {
-#     "num_vars": len(parameters_df),    # Number of input parameters
-#     "names": parameters_df["Name"].values,   # Parameter names
-#     "bounds": [[row['Min'], row['Max']] for _, row in parameters_df.iterrows()],    # Parameter ranges
-# }
-
-# %% [markdown]
-# ### Step 3. Generate the FAST Samples
-#
-# To apply the FAST method, you need to generate the sampling points for the input parameters using the SALib.sample.fast function. Here, you specify the total number of samples you want (it is important to choose a sufficiently large number to ensure the analysis is robust). 
-#
-# N.B. For a typical FAST setup:
-#
-# - num_samples refers to the number of frequencies used to sample each parameter.
-# - The actual number of parameter sets generated depends on num_vars and the sampling process.
-#
-# The total number of samples is typically num_samples * num_vars, and thus, Y should have this size. You can adjust the setup to reflect this. 
-
-# # %%
 # # Generate samples using the FAST method
 # num_samples = 300  # Number of samples to be generated
 # param_values = fast_sampler.sample(problem, num_samples, seed=0)
