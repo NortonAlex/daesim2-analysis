@@ -73,7 +73,13 @@ forcing_data = ForcingData(
     harvest_dates=args.harvest_dates,
     df=df_forcing
 )
-
+ManagementX = ManagementModule(
+    cropType=args.crop_type,
+    sowingDays=forcing_data.sowing_days,
+    harvestDays=forcing_data.harvest_dates,
+    sowingYears=forcing_data.sowing_years,
+    harvestYears=forcing_data.harvest_years
+)
 
 
 # # Climate_doy_f = interp_forcing(time_nday_f, time_doy_f, kind="pconst") #, fill_value=(time_doy[0],time_doy[-1]))
