@@ -76,7 +76,6 @@ forcing_data = ForcingData(
 
 
 
-
 # # Climate_doy_f = interp_forcing(time_nday_f, time_doy_f, kind="pconst") #, fill_value=(time_doy[0],time_doy[-1]))
 # # Climate_year_f = interp_forcing(time_nday_f, time_year_f, kind="pconst") #, fill_value=(time_year[0],time_year[-1]))
 # # Climate_airTempCMin_f = interp1d(time_nday_f, df_forcing["Minimum temperature"].values)

@@ -7,9 +7,11 @@ n_samples=100
 dir_results=results
 path_df_forcing_1=DAESIM_data/DAESim_forcing_data/Rutherglen_1971.csv
 paths_df_forcing=("$path_df_forcing_1")
-path_parameters_file='parameters/Fast1.json'
+path_parameters_file=parameters/Fast1.json
+crop=wheat
 
 python3.9 notebooks/FAST.py \
+  --crop $crop \
   --n_processes $n_processes \
   --n_samples $n_samples \
   --dir_results $dir_results \

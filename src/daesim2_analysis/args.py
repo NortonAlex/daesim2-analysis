@@ -15,6 +15,7 @@ class Args:
     CLatDeg                 : str = -36.05
     CLonDeg                 : str = 146.5
     tz                      : int = 10
+    crop_type               : str = 'wheat'
     sowing_dates            : list[date] = field(default_factory=lambda: [date(year=1971, month=5, day=11)])
     harvest_dates           : list[date] = field(default_factory=lambda: [date(year=1971, month=12, day=23)])
     n_processes             : int = 1
@@ -22,6 +23,7 @@ class Args:
     dir_results             : str = 'DAESIM_data/FAST_results'
     paths_df_forcing        : list[str] = field(default_factory=lambda: ['DAESIM_data/DAESim_forcing_data/Rutherglen_1971.csv'])
     path_parameters_file    : str = 'parameters/Fast1.json'
+
 
     xsite: str = field(init=False)
     title: str = field(init=False)
@@ -70,6 +72,12 @@ class Args:
         )
 
         group2 = parser.add_argument_group('File Arguments')
+        group2.add_argument(
+            '--crop',
+            type=str,
+            required=True,
+            help='Name of crop'
+        )
         group2.add_argument(
             '--dir_results',
             type=str,

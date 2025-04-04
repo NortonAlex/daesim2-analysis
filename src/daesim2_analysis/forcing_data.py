@@ -5,6 +5,7 @@ from pandas import to_datetime
 from pandas import DataFrame
 from dataclasses import field
 from daesim.climate import *
+from dataclasses import field
 import numpy as np
 
 @dataclass(frozen=True)
@@ -39,6 +40,13 @@ class ForcingData:
     Climate_airO2_f         : np.ndarray = field(init=False)
     Climate_soilTheta_z_f   : np.ndarray = field(init=False) 
     Climate_nday_f          : np.ndarray = field(init=False)
+
+    sowing_days             : np.ndarray = field(init=False)
+    sowing_years            : np.ndarray = field(init=False)
+    harvest_days            : np.ndarray = field(init=False)
+    harvest_years           : np.ndarray = field(init=False)
+    reset_days              : list[np.uint64] = field(init=False)
+    zero_crossing_indices   : list[int] = field(default_factory=lambda: [4, 5, 6])
 
     def set_starts(s: Self):
         object.__setattr__(s, 'start_doy_f', s.df['DOY'].values[0])
@@ -108,9 +116,29 @@ class ForcingData:
         ]
     )
 
+    def find_sowing_and_harvest_days(s: Self):
+        sowing_steps_f = s.SiteX.find_event_steps(s.sowing_dates, s.time_index_f)
+        harvest_steps_f = s.SiteX.find_event_steps(s.harvest_dates, s.time_index_f)
+
+        time_axis = s.time_nday_f[sowing_steps_f[0]:harvest_steps_f[-1]+2]
+        time_index = s.time_index_f[sowing_steps_f[0]:harvest_steps_f[-1]+2]
+
+        sowing_steps_itax = s.SiteX.find_event_steps(s.sowing_dates, time_index)
+        harvest_steps_itax = s.SiteX.find_event_steps(s.harvest_dates, time_index)
+        reset_days_itax = s.SiteX.find_event_steps(s.sowing_dates + s.harvest_dates, time_index)
+
+        object.__setattr__(s, 'time_axis', time_axis)
+        object.__setattr__(s, 'time_index', time_index)
+        object.__setattr__(s, 'sowing_days', np.floor(s.Climate_doy_f(time_axis[sowing_steps_itax])))
+        object.__setattr__(s, 'sowing_years', np.floor(s.Climate_year_f(time_axis[sowing_steps_itax])))
+        object.__setattr__(s, 'harvest_dates', np.floor(s.Climate_doy_f(time_axis[harvest_steps_itax])))
+        object.__setattr__(s, 'harvest_years', np.floor(s.Climate_year_f(time_axis[harvest_steps_itax])))
+        object.__setattr__(s, 'reset_days_tax', list(time_axis[sorted(reset_days_itax)]))
+
+
     def __post_init__(s: Self):
         s.set_starts()
         s.time_descretisation()
         s.validate_time()
         s.generate_forcing_inputs()
-        
+        s.find_sowing_and_harvest_days()
