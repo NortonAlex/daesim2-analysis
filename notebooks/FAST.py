@@ -80,8 +80,30 @@ ManagementX = ManagementModule(
     sowingYears=forcing_data.sowing_years,
     harvestYears=forcing_data.harvest_years
 )
-
-
+PlantDevX = PlantGrowthPhases(
+    phases=args.phases,
+    gdd_requirements=args.gdd_requirements,
+    vd_requirements=args.vd_requirements,
+    allocation_coeffs=args.allocation_coeffs,
+    turnover_rates=args.turnover_rates
+)
+BoundLayerX = BoundaryLayerModule(Site=SiteX)
+LeafX = LeafGasExchangeModule2(
+    Site=SiteX,
+    Jmax_opt_rVcmax=args.Jmax_opt_rVcmax,
+    Jmax_opt_rVcmax_method=args.Jmax_opt_rVcmax_method
+)
+SoilLayersX = SoilLayers(
+    nlevmlsoil=args.nlevmlsoil,
+    z_max=args.z_max,
+    z_top=args.z_top,
+    discretise_method=args.discretise_method,
+    z_horizon=args.z_horizon,
+    Psi_e=args.Psi_e,
+    b_soil=args.b_soil,
+    K_sat=args.K_sat,
+    soilThetaMax=args.soilThetaMax
+)
 # # Climate_doy_f = interp_forcing(time_nday_f, time_doy_f, kind="pconst") #, fill_value=(time_doy[0],time_doy[-1]))
 # # Climate_year_f = interp_forcing(time_nday_f, time_year_f, kind="pconst") #, fill_value=(time_year[0],time_year[-1]))
 # # Climate_airTempCMin_f = interp1d(time_nday_f, df_forcing["Minimum temperature"].values)
