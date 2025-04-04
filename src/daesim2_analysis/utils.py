@@ -20,5 +20,5 @@ def load_df_forcing(paths_df_forcing: list[str])->DataFrame:
 
 def calculate_soilTheta_z(df: DataFrame):
     moistures = df[[c for c in df.columns if c.lower().startswith('soil moisture')]]
-    moistures = moistures.dropna(axis=1, how='all')
-    return column_stack(moistures.values)
+    # moistures = moistures.dropna(axis=1, how='all')
+    return column_stack(moistures.values).T

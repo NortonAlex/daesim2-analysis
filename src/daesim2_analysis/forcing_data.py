@@ -40,7 +40,6 @@ class ForcingData:
     Climate_soilTheta_z_f   : np.ndarray = field(init=False) 
     Climate_nday_f          : np.ndarray = field(init=False)
 
-
     def set_starts(s: Self):
         object.__setattr__(s, 'start_doy_f', s.df['DOY'].values[0])
         object.__setattr__(s, 'start_year_f', s.df['Year'].values[0])
@@ -62,20 +61,35 @@ class ForcingData:
         except Exception as e: raise ValueError('Sowing date before the earliest date in forcing dataframe')
 
     def generate_forcing_inputs(s: Self):
-        s.Climate_doy_f = interp_forcing(s.time_nday_f, s.time_doy_f, kind="pconst") #, fill_value=(time_doy[0],time_doy[-1]))
-        s.Climate_year_f = interp_forcing(s.time_nday_f, s.time_year_f, kind="pconst") #, fill_value=(time_year[0],time_year[-1]))
-        s.Climate_airTempCMin_f = interp1d(s.time_nday_f, s.df["Minimum temperature"].values)
-        s.Climate_airTempCMax_f = interp1d(s.time_nday_f, s.df["Maximum temperature"].values)
-        s.Climate_airTempC_f = interp1d(s.time_nday_f, (s.df["Minimum temperature"].values+s.df["Maximum temperature"].values)/2)
-        s.Climate_solRadswskyb_f = interp1d(s.time_nday_f, 10*(s.df["Global Radiation"].values-s.df["Diffuse Radiation"].values))
-        s.Climate_solRadswskyd_f = interp1d(s.time_nday_f, 10*s.df["Diffuse Radiation"].values)
-        s.Climate_airPressure_f = interp1d(s.time_nday_f, 100*s.df["Pressure"].values)
-        s.Climate_airRH_f = interp1d(s.time_nday_f, s.df["Relative Humidity"].values)
-        s.Climate_airU_f = interp1d(s.time_nday_f, s.df["Uavg"].values)
-        s.Climate_airCO2_f = interp1d(s.time_nday_f, s.df["Atmospheric CO2 Concentration (bar)"].values)
-        s.Climate_airO2_f = interp1d(s.time_nday_f, s.df["Atmospheric O2 Concentration (bar)"].values)
-        s.Climate_soilTheta_z_f = interp1d(s.time_nday_f, s._soilTheta_z, axis=0)  # Interpolates across timesteps, handles all soil layers at once
-        s.Climate_nday_f = interp1d(s.time_nday_f, s.time_nday_f)
+        Climate_doy_f = interp_forcing(s.time_nday_f, s.time_doy_f, kind='pconst') #, fill_value=(time_doy[0],time_doy[-1]))
+        Climate_year_f = interp_forcing(s.time_nday_f, s.time_year_f, kind='pconst') #, fill_value=(time_year[0],time_year[-1]))
+        Climate_airTempCMin_f = interp1d(s.time_nday_f, s.df['Minimum temperature'].values)
+        Climate_airTempCMax_f = interp1d(s.time_nday_f, s.df['Maximum temperature'].values)
+        Climate_airTempC_f = interp1d(s.time_nday_f, (s.df['Minimum temperature'].values+s.df['Maximum temperature'].values)/2)
+        Climate_solRadswskyb_f = interp1d(s.time_nday_f, 10*(s.df['Global Radiation'].values-s.df['Diffuse Radiation'].values))
+        Climate_solRadswskyd_f = interp1d(s.time_nday_f, 10*s.df['Diffuse Radiation'].values)
+        Climate_airPressure_f = interp1d(s.time_nday_f, 100*s.df['Pressure'].values)
+        Climate_airRH_f = interp1d(s.time_nday_f, s.df['Relative Humidity'].values)
+        Climate_airU_f = interp1d(s.time_nday_f, s.df['Uavg'].values) 
+        Climate_airCO2_f = interp1d(s.time_nday_f, s.df['Atmospheric CO2 Concentration (bar)'].values)
+        Climate_airO2_f = interp1d(s.time_nday_f, s.df['Atmospheric O2 Concentration (bar)'].values)
+        Climate_soilTheta_z_f = interp1d(s.time_nday_f, s._soilTheta_z, axis=0)  # Interpolates across timesteps, handles all soil layers at once
+        Climate_nday_f = interp1d(s.time_nday_f, s.time_nday_f)  # nday represents the ordinal day-of-year plus each simulation day (e.g. a model run starting on Jan 30 and going for 2 years will have nday=30+np.arange(2*365))
+
+        object.__setattr__(s, 'Climate_doy_f', Climate_doy_f)
+        object.__setattr__(s, 'Climate_year_f', Climate_year_f)
+        object.__setattr__(s, 'Climate_airTempCMin_f', Climate_airTempCMin_f)
+        object.__setattr__(s, 'Climate_airTempCMax_f', Climate_airTempCMax_f)
+        object.__setattr__(s, 'Climate_airTempC_f', Climate_airTempC_f)
+        object.__setattr__(s, 'Climate_solRadswskyb_f', Climate_solRadswskyb_f)
+        object.__setattr__(s, 'Climate_solRadswskyd_f', Climate_solRadswskyd_f)
+        object.__setattr__(s, 'Climate_airPressure_f', Climate_airPressure_f)
+        object.__setattr__(s, 'Climate_airRH_f', Climate_airRH_f)
+        object.__setattr__(s, 'Climate_airU_f', Climate_airU_f)
+        object.__setattr__(s, 'Climate_airCO2_f', Climate_airCO2_f)
+        object.__setattr__(s, 'Climate_airO2_f', Climate_airO2_f)
+        object.__setattr__(s, 'Climate_soilTheta_z_f', Climate_soilTheta_z_f)
+        object.__setattr__(s, 'Climate_nday_f', Climate_nday_f)
 
     inputs = property(
         lambda s: [
@@ -93,20 +107,10 @@ class ForcingData:
             s.Climate_year_f
         ]
     )
-   
-
 
     def __post_init__(s: Self):
         s.set_starts()
         s.time_descretisation()
         s.validate_time()
         s.generate_forcing_inputs()
-
-
-
-
-
-
-
-
-
+        

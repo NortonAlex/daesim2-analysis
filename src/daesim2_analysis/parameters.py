@@ -37,8 +37,6 @@ class Parameters:
     consistent_length = property(lambda s: s.lengths['Module Path'] - s.avg_length == 0)
     __sha256__        = property(lambda s: sha256(s.__str__().encode()).hexdigest())
     unique_id         = property(lambda s: s.__sha256__)
-
-
  
     def __post_init__(s: Self):
         if not s.consistent_length:
