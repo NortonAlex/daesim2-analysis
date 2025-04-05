@@ -135,7 +135,7 @@ class ForcingData:
         object.__setattr__(s, 'sowing_years', np.floor(s.Climate_year_f(time_axis[sowing_steps_itax])))
         object.__setattr__(s, 'harvest_dates', np.floor(s.Climate_doy_f(time_axis[harvest_steps_itax])))
         object.__setattr__(s, 'harvest_years', np.floor(s.Climate_year_f(time_axis[harvest_steps_itax])))
-        object.__setattr__(s, 'reset_days_tax', list(time_axis[sorted(reset_days_itax)]))
+        object.__setattr__(s, 'reset_days', list(time_axis[sorted(reset_days_itax)]))
 
 
     def __post_init__(s: Self):

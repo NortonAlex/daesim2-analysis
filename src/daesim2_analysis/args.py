@@ -15,7 +15,7 @@ class Args:
     CLatDeg                 : str = -36.05
     CLonDeg                 : str = 146.5
     tz                      : int = 10
-    crop_type               : str = 'wheat'
+    crop_type               : str = 'Wheat'
     sowing_dates            : list[date] = field(default_factory=lambda: [date(year=1971, month=5, day=11)])
     harvest_dates           : list[date] = field(default_factory=lambda: [date(year=1971, month=12, day=23)])
     n_processes             : int = 1
@@ -24,7 +24,7 @@ class Args:
     paths_df_forcing        : list[str] = field(default_factory=lambda: ['DAESIM_data/DAESim_forcing_data/Rutherglen_1971.csv'])
     path_parameters_file    : str = 'parameters/Fast1.json'
 
-    ## ManagementX Args
+    ## ManagementX
     phases                  : list[str] = field(default_factory=lambda: ["germination", "vegetative", "spike", "anthesis", "grainfill", "maturity"])
     gdd_requirements        : list[int] = field(default_factory=lambda: [50,800,280,150,300,300])
     vd_requirements         : list[int] = field(default_factory=lambda: [0, 30, 0, 0, 0, 0])
@@ -49,7 +49,7 @@ class Args:
                                 ]
                             )
     
-    ## LeafGasExchangeModule2 Args
+    ## LeafGasExchangeModule2
     Jmax_opt_rVcmax         : float = 0.89
     Jmax_opt_rVcmax_method  : str = 'log'
 
@@ -64,15 +64,32 @@ class Args:
     K_sat                   : list[float] = field(default_factory=lambda: [29.7, 29.7, 29.7, 25.2, 13.9, 40.9])
     soilThetaMax            : list[float] = field(default_factory=lambda: [0.12, 0.12, 0.12, 0.20, 0.3, 0.4])
 
-    
+    ## PlantCH20X
+    maxLAI                  : float = 6.5
+    ksr_coeff               : int = 1500
+    SLA                     : float = 0.02
+    sf                      : float = 1.0
+    Psi_f                   : float = -5.0
 
+    ## PlantXModuleCalculator
+    GDD_method              : str = 'nonlinear'
+    GDD_Tbase               : float = 0.0
+    GDD_Topt                : float = 22.5
+    GDD_Tupp                : float = 35.0
 
-    xsite: str = field(init=False)
-    title: str = field(init=False)
-    description: str = field(init=False)
-    dir_xsite_FAST_results: str = field(init=False)
-    dir_xsite_parameters: str = field(init=False)
-    path_Mpx: str = field(init=False)
+    d_r_max                 : float = 2.0
+    Vmaxremob               : float = 3.0
+    Kmremob                 : float = 0.5
+    remob_phase             : list[str] = field(default_factory=lambda:['grainfill','maturity'])
+    specified_phase         : str = 'spike'
+    grainfill_phase         : str = field(default_factory=lambda:['grainfill','maturity'])
+
+    xsite                   : str = field(init=False)
+    title                   : str = field(init=False)
+    description             : str = field(init=False)
+    dir_xsite_FAST_results  : str = field(init=False)
+    dir_xsite_parameters    : str = field(init=False)
+    path_Mpx                : str = field(init=False)
 
     def __post_init__(s: Self):
         xsite = '-'.join([path.split('/')[-1].split('.')[0] for path in s.paths_df_forcing])

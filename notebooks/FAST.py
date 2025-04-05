@@ -93,6 +93,9 @@ LeafX = LeafGasExchangeModule2(
     Jmax_opt_rVcmax=args.Jmax_opt_rVcmax,
     Jmax_opt_rVcmax_method=args.Jmax_opt_rVcmax_method
 )
+CanopyX = CanopyLayers(nlevmlcan=3)
+CanopyRadX = CanopyRadiation(Canopy=CanopyX)
+CanopyGasExchangeX = CanopyGasExchange(Leaf=LeafX,Canopy=CanopyX,CanopyRad=CanopyRadX)
 SoilLayersX = SoilLayers(
     nlevmlsoil=args.nlevmlsoil,
     z_max=args.z_max,
@@ -104,175 +107,75 @@ SoilLayersX = SoilLayers(
     K_sat=args.K_sat,
     soilThetaMax=args.soilThetaMax
 )
-# # Climate_doy_f = interp_forcing(time_nday_f, time_doy_f, kind="pconst") #, fill_value=(time_doy[0],time_doy[-1]))
-# # Climate_year_f = interp_forcing(time_nday_f, time_year_f, kind="pconst") #, fill_value=(time_year[0],time_year[-1]))
-# # Climate_airTempCMin_f = interp1d(time_nday_f, df_forcing["Minimum temperature"].values)
-# # Climate_airTempCMax_f = interp1d(time_nday_f, df_forcing["Maximum temperature"].values)
-# # Climate_airTempC_f = interp1d(time_nday_f, (df_forcing["Minimum temperature"].values+df_forcing["Maximum temperature"].values)/2)
-# # Climate_solRadswskyb_f = interp1d(time_nday_f, 10*(df_forcing["Global Radiation"].values-df_forcing["Diffuse Radiation"].values))
-# # Climate_solRadswskyd_f = interp1d(time_nday_f, 10*df_forcing["Diffuse Radiation"].values)
-# # Climate_airPressure_f = interp1d(time_nday_f, 100*df_forcing["Pressure"].values)
-# # Climate_airRH_f = interp1d(time_nday_f, df_forcing["Relative Humidity"].values)
-# # Climate_airU_f = interp1d(time_nday_f, df_forcing["Uavg"].values)
-# # Climate_airCO2_f = interp1d(time_nday_f, df_forcing["Atmospheric CO2 Concentration (bar)"].values)
-# # Climate_airO2_f = interp1d(time_nday_f, df_forcing["Atmospheric O2 Concentration (bar)"].values)
-# # Climate_soilTheta_z_f = interp1d(time_nday_f, _soilTheta_z, axis=0)  # Interpolates across timesteps, handles all soil layers at once
-# # Climate_nday_f = interp1d(time_nday_f, time_nday_f)   ## nday represents the ordinal day-of-year plus each simulation day (e.g. a model run starting on Jan 30 and going for 2 years will have nday=30+np.arange(2*365))
+PlantCH2OX = PlantCH2O(
+    Site=SiteX,
+    SoilLayers=SoilLayersX,
+    CanopyGasExchange=CanopyGasExchangeX,
+    BoundaryLayer=BoundLayerX,
+    maxLAI=args.maxLAI,
+    ksr_coeff=args.ksr_coeff,
+    SLA=args.SLA,
+    sf=args.sf,
+    Psi_f=args.Psi_f
+)
+PlantAllocX = PlantOptimalAllocation(Plant=PlantCH2OX)
+PlantX = PlantModuleCalculator(
+    Site=SiteX,
+    Management=ManagementX,
+    PlantDev=PlantDevX,
+    PlantCH2O=PlantCH2OX,
+    PlantAlloc=PlantAllocX,
+    GDD_method=args.GDD_method, #"nonlinear",
+    GDD_Tbase= args.GDD_Tbase,# 0.0,
+    GDD_Topt= args.GDD_Topt, #22.5,
+    GDD_Tupp= args.GDD_Tupp,#35.0,
+    hc_max_GDDindex=sum(PlantDevX.gdd_requirements[0:2])/PlantDevX.totalgdd,
+    d_r_max=args.d_r_max, #2.0,
+    Vmaxremob=args.Vmaxremob,
+    Kmremob=args.Kmremob,
+    remob_phase=args.remob_phase,
+    specified_phase=args.specified_phase,
+    grainfill_phase=args.grainfill_phase,
+)
 
-# # # %% [markdown]
-# # # ### Step 4. Initialise the Model
+PlantXCalc = PlantX.calculate
 
-# # # %%
-# # ## Check that the first sowing date and last harvest date are within the available forcing data period
-# # # Apply validation to sowing and harvest dates
-# # SiteX.validate_event_dates(sowing_dates, time_index_f, event_name="Sowing")
-# # SiteX.validate_event_dates(harvest_dates, time_index_f, event_name="Harvest")
+Model = ODEModelSolver(
+    calculator=PlantXCalc,
+    states_init=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    time_start=forcing_data.time_axis[0],
+    log_diagnostics=True
+)
 
-# # # Find steps for all sowing and harvest dates in the forcing data
-# # sowing_steps_f = SiteX.find_event_steps(sowing_dates, time_index_f)
-# # harvest_steps_f = SiteX.find_event_steps(harvest_dates, time_index_f)
+input_data = [
+    ODEModelSolver,
+    forcing_data.time_axis,
+    forcing_data.time_index,
+    forcing_data.inputs,
+    forcing_data.reset_days,
+    forcing_data.zero_crossing_indices
+]
+Mpx = []
+paramsets_per_run = get_iparamsets_per_run(param_values, args.n_processes)
+n_runs = len(paramsets_per_run)
 
-# # # 3. Generate time axis for ODE Solver, which is set to start at the first sowing event and end just after the last harvest event
-# # time_axis = time_nday_f[sowing_steps_f[0]:harvest_steps_f[-1]+2]
-# # # Corresponding date time index
-# # time_index = time_index_f[sowing_steps_f[0]:harvest_steps_f[-1]+2]
 
-# # ## Determine the ODE solver reset days
-# # sowing_steps_itax = SiteX.find_event_steps(sowing_dates, time_index)
-# # harvest_steps_itax = SiteX.find_event_steps(harvest_dates, time_index)
-# # reset_days_itax = SiteX.find_event_steps(sowing_dates+harvest_dates, time_index)
-# # reset_days_itax.sort()
-# # reset_days_tax = list(time_axis[reset_days_itax])
+evaluate_paramset(
+    1,
+    param_values,
+    PlantX,
+    input_data,
+    parameters.df,
+    parameters.problem
+)
 
-# # ## Determine the sowing and harvest days and years for the DAESIM2 Management module
-# # sowingDays = np.floor(Climate_doy_f(time_axis[sowing_steps_itax]))
-# # sowingYears = np.floor(Climate_year_f(time_axis[sowing_steps_itax]))
-# # harvestDays = np.floor(Climate_doy_f(time_axis[harvest_steps_itax]))
-# # harvestYears = np.floor(Climate_year_f(time_axis[harvest_steps_itax]))
 
-# # # %%
-# # # time_axis = np.arange(135, 391, 1)   ## Note: time_axis represents the simulation day (_nday) and must be the same x-axis upon which the forcing data was interpolated on
-# # # sowing_date = 135
-# # # harvest_date = None
+# nsamples = param_values.shape[0]
 
-# # ManagementX = ManagementModule(cropType="Wheat",sowingDays=sowingDays,harvestDays=harvestDays,sowingYears=sowingYears,harvestYears=harvestYears)
+# iparamsets_per_run = [
+#     list(range(i, i+args.n_processes))
+#     for i
+#     in range(0, len(param_values), args.n_processes)
+# ]
+# n_runs = len(iparamsets_per_run)
 
-# # PlantDevX = PlantGrowthPhases(
-# #     phases=["germination", "vegetative", "spike", "anthesis", "grainfill", "maturity"],
-# #     # gdd_requirements=[120,800,250,200,300,200],
-# #     gdd_requirements=[50,800,280,150,300,300],
-# #     # vd_requirements=[0, 40, 0, 0, 0, 0],
-# #     vd_requirements=[0, 30, 0, 0, 0, 0],
-# #     allocation_coeffs = [
-# #         [0.2, 0.1, 0.7, 0.0, 0.0],
-# #         [0.5, 0.1, 0.4, 0.0, 0.0],
-# #         [0.30, 0.4, 0.30, 0.0, 0.0],
-# #         [0.30, 0.4, 0.30, 0.0, 0.0],
-# #         [0.1, 0.1, 0.1, 0.7, 0.0],
-# #         [0.1, 0.1, 0.1, 0.7, 0.0]
-# #     ],
-# #     turnover_rates = [[0.001,  0.001, 0.001, 0.0, 0.0],
-# #                       [0.01, 0.002, 0.008, 0.0, 0.0],
-# #                       [0.01, 0.002, 0.008, 0.0, 0.0],
-# #                       [0.01, 0.002, 0.008, 0.0, 0.0],
-# #                       [0.033, 0.016, 0.033, 0.0002, 0.0],
-# #                       [0.10, 0.033, 0.10, 0.0002, 0.0]])
-
-# # BoundLayerX = BoundaryLayerModule(Site=SiteX)
-# # LeafX = LeafGasExchangeModule2(Site=SiteX,Jmax_opt_rVcmax=0.89,Jmax_opt_rVcmax_method="log")
-# # CanopyX = CanopyLayers(nlevmlcan=3)
-# # CanopyRadX = CanopyRadiation(Canopy=CanopyX)
-# # CanopyGasExchangeX = CanopyGasExchange(Leaf=LeafX,Canopy=CanopyX,CanopyRad=CanopyRadX)
-# # # SoilLayersX = SoilLayers(nlevmlsoil=2,z_max=2.0)
-# # SoilLayersX = SoilLayers(nlevmlsoil=6,z_max=0.66,z_top=0.10,discretise_method="horizon",
-# #                          z_horizon=[0.06, 0.06, 0.06, 0.10, 0.10, 0.28],
-# #                         Psi_e=[-1.38E-03, -1.38E-03, -1.38E-03, -1.32E-03, -2.58E-03, -0.960E-03],
-# #                         b_soil = [4.74, 4.74, 4.74, 6.77, 8.17, 10.73],
-# #                          K_sat = [29.7, 29.7, 29.7, 25.2, 13.9, 40.9],
-# #                          soilThetaMax = [0.12, 0.12, 0.12, 0.20, 0.3, 0.4])
-# # # PlantCH2OX = PlantCH2O(Site=SiteX,SoilLayers=SoilLayersX,CanopyGasExchange=CanopyGasExchangeX,BoundaryLayer=BoundLayerX,maxLAI=6.0,ksr_coeff=1000,SLA=0.030)
-# # PlantCH2OX = PlantCH2O(Site=SiteX,SoilLayers=SoilLayersX,CanopyGasExchange=CanopyGasExchangeX,BoundaryLayer=BoundLayerX,maxLAI=6.5,ksr_coeff=1500,SLA=0.02,sf=1.0,Psi_f=-5.0)
-# # PlantAllocX = PlantOptimalAllocation(Plant=PlantCH2OX)
-# # PlantX = PlantModuleCalculator(
-# #     Site=SiteX,
-# #     Management=ManagementX,
-# #     PlantDev=PlantDevX,
-# #     PlantCH2O=PlantCH2OX,
-# #     PlantAlloc=PlantAllocX,
-# #     GDD_method="nonlinear",
-# #     GDD_Tbase=0.0,
-# #     GDD_Topt=22.5,
-# #     GDD_Tupp=35.0,
-# #     hc_max_GDDindex=sum(PlantDevX.gdd_requirements[0:2])/PlantDevX.totalgdd,
-# #     d_r_max=2.0,
-# #     Vmaxremob=3.0,
-# #     Kmremob=0.5,
-# #     remob_phase=["grainfill","maturity"],
-# #     specified_phase="spike",
-# #     grainfill_phase=["grainfill","maturity"],
-# # )
-
-# # # %%
-# # ## Define the callable calculator that defines the right-hand-side ODE function
-# # PlantXCalc = PlantX.calculate
-
-# # Model = ODEModelSolver(calculator=PlantXCalc, states_init=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], time_start=time_axis[0], log_diagnostics=True)
-
-# # forcing_inputs = [Climate_solRadswskyb_f,
-# #                   Climate_solRadswskyd_f,
-# #                   Climate_airTempCMin_f,
-# #                   Climate_airTempCMax_f,
-# #                   Climate_airPressure_f,
-# #                   Climate_airRH_f,
-# #                   Climate_airCO2_f,
-# #                   Climate_airO2_f,
-# #                   Climate_airU_f,
-# #                   Climate_soilTheta_z_f,
-# #                   Climate_doy_f,
-# #                   Climate_year_f]
-
-# # reset_days = reset_days_tax
-
-# # zero_crossing_indices = [4,5,6]
-
-# # # %%
-
-# # write_to_nc = True
-
-# # iparamsets_per_run = [list(range(i, i+n_processes)) for i in range(0, len(param_values), n_processes)]
-# # input_data = [ODEModelSolver, time_axis, time_index, forcing_inputs, reset_days, zero_crossing_indices]
-# # Mpx_column_headers = "nparamset,W_P_peakW,W_L_peakW,W_R_peakW,W_S_peakW,W_S_spike0,W_S_anth0,GPP_int_seas,NPP_int_seas,Rml_int_seas,Rmr_int_seas,Rg_int_seas,trflux_int_seas,FCstem2grain_int_seas,NPP2grain_int_seas,E_int_seas,LAI_peakW,W_spike_anth1,GY_mature,Sdpot_mature,GN_mature"   # to save as header in csv file. N.B. must match the custom output in the update_and_run_model function
-# # Mpx = []
-# # n_runs = len(iparamsets_per_run)
-
-# # def evaluate_paramset(iparamset: int):
-# #   nparamset = iparamset + 1
-# #   paramset = param_values[iparamset]
-# #   # model_output = fastsa.update_and_run_model(paramset, PlantX, input_data, parameters_df, problem)
-# #   model_output = fastsa.update_and_run_model(paramset, PlantX, input_data, parameters_df, problem)
-  
-# #   Mpxi, diagnostics = model_output[0], model_output[1]
-# #   if write_to_nc:
-# #     nsigfigures = len(str(np.shape(param_values)[0]))
-# #     filename_write = f"FAST_results_{xsite}_paramset{nparamset:0{nsigfigures}}.nc"
-# #     daesim_io_write_diag_to_nc(
-# #       PlantX,
-# #       diagnostics,
-# #       dir_xsite_parameters,
-# #       filename_write,
-# #       time_index,
-# #       problem=problem,
-# #       param_values=paramset,
-# #       nc_attributes={'title': title, 'description': description}
-# #     )
-# #   return np.insert(Mpxi, 0, nparamset)
-
-# # # %%
-
-# # for n_run in range(n_runs):
-# #    with Pool(processes=n_processes) as pool:
-# #       print(iparamsets_per_run[n_run])
-# #       results = pool.map(evaluate_paramset, iparamsets_per_run[n_run])
-# #       Mpx += results
-  
-# # np.save(path_Mpx, np.array(Mpx))
