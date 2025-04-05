@@ -1,5 +1,6 @@
 from daesim2_analysis import fast_sensitivity as fastsa
 from daesim.plant_1000 import PlantModuleCalculator
+from daesim.utils import daesim_io_write_diag_to_nc
 from SALib.sample import fast_sampler
 from SALib.analyze import fast
 from numpy import column_stack
@@ -42,9 +43,28 @@ def evaluate_paramset(
     input_data: list[np.ndarray],
     parameters_df: DataFrame,
     problem: dict,
+    xsite: str,
+    dir_xsite_parameters: str,
+    time_index: np.ndarray,
+    title: str,
+    description: str
 ):
     
     nparamset = iparamset + 1
     paramset = param_values[iparamset]
     model_output = fastsa.update_and_run_model(paramset, PlantX, input_data, parameters_df, problem)
-    
+    Mpxi, diagnostics = model_output[0], model_output[1]
+
+    nsigfigures = len(str(np.shape(param_values)[0]))
+    filename_write = f"FAST_results_{xsite}_paramset{nparamset:0{nsigfigures}}.nc"
+    daesim_io_write_diag_to_nc(
+        PlantX,
+        diagnostics,
+        dir_xsite_parameters,
+        filename_write,
+        time_index,
+        problem=problem,
+        param_values=paramset,
+        nc_attributes={'title': title, 'description': description}
+    )
+    return np.insert(Mpxi, 0, nparamset)

@@ -51,6 +51,7 @@ from typing import List
 from os import makedirs
 from tqdm import tqdm
 from time import time
+from functools import partial
 
 from daesim2_analysis.args import Args
 from daesim2_analysis.args import is_interactive
@@ -160,14 +161,31 @@ paramsets_per_run = get_iparamsets_per_run(param_values, args.n_processes)
 n_runs = len(paramsets_per_run)
 
 
-evaluate_paramset(
-    1,
-    param_values,
-    PlantX,
-    input_data,
-    parameters.df,
-    parameters.problem
+# evaluate_paramset(
+#     1,
+#     param_values,
+#     PlantX,
+#     input_data,
+#     parameters.df,
+#     parameters.problem,
+#     args.dir_xsite_parameters
+# )
+
+evaluate_iparamset = partial(
+    evaluate_paramset,
+    param_values=param_values,
+    PlantX=PlantX,
+    input_data=input_data,
+    parameters_df=parameters.df,
+    problem=parameters.problem,
+    xsite=args.xsite,
+    dir_xsite_parameters=args.xsite,
+    title=args.title,
+    description=args.description,
+    time_index=forcing_data.time_index
 )
+evaluate_iparamset(1)
+
 
 
 # nsamples = param_values.shape[0]
