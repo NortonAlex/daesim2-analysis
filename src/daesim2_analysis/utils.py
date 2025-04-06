@@ -8,6 +8,7 @@ from pandas import to_datetime
 from pandas import DataFrame
 from pandas import read_csv
 from pandas import concat
+from os.path import abspath
 import numpy as np
 
 def load_df_forcing(paths_df_forcing: list[str])->DataFrame:
@@ -57,12 +58,14 @@ def evaluate_paramset(
 
     nsigfigures = len(str(np.shape(param_values)[0]))
     filename_write = f"FAST_results_{xsite}_paramset{nparamset:0{nsigfigures}}.nc"
+
+
     daesim_io_write_diag_to_nc(
         PlantX,
         diagnostics,
-        dir_xsite_parameters,
-        filename_write,
-        time_index,
+        filepath=abspath(dir_xsite_parameters) + '/',
+        filename=filename_write,
+        datetimes=time_index,
         problem=problem,
         param_values=paramset,
         nc_attributes={'title': title, 'description': description}
