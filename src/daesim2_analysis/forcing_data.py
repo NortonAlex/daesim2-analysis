@@ -48,8 +48,6 @@ class ForcingData:
     reset_days              : list[np.uint64] = field(init=False)
     zero_crossing_indices   : list[int] = field(default_factory=lambda: [4, 5, 6])
 
-
-
     def set_starts(s: Self):
         object.__setattr__(s, 'start_doy_f', s.df['DOY'].values[0])
         object.__setattr__(s, 'start_year_f', s.df['Year'].values[0])

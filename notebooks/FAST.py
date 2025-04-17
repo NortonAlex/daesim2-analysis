@@ -165,8 +165,13 @@ def evaluate_iparamset(iparamset: int):
     nparamset = iparamset + 1
     paramset = param_values[iparamset]
     # model_output = fastsa.update_and_run_model(paramset, PlantX, input_data, parameters_df, problem)
-    model_output = fastsa.update_and_run_model(paramset, PlantX, input_data, parameters.df, parameters.problem)
-    
+    model_output = fastsa.update_and_run_model(
+        paramset,
+        PlantX,
+        input_data,
+        parameters.df,
+        parameters.problem
+    )
     Mpxi, diagnostics = model_output[0], model_output[1]
 
     nsigfigures = len(str(np.shape(param_values)[0]))
@@ -174,7 +179,7 @@ def evaluate_iparamset(iparamset: int):
     daesim_io_write_diag_to_nc(
       PlantX,
       diagnostics,
-      args.dir_xsite_parameters,
+      args.dir_xsite_parameters + '/',
       filename_write,
       forcing_data.time_index,
       problem=parameters.problem,
@@ -183,12 +188,11 @@ def evaluate_iparamset(iparamset: int):
     )
     return np.insert(Mpxi, 0, nparamset)
 
-
 if __name__ == '__main__':
+    print(args.dir_xsite_FAST_results)
+    print(args.dir_xsite_parameters)
     for n_run in range(n_runs):
         with Pool(processes=args.n_processes) as pool:
             Mpx += pool.map(evaluate_iparamset, iparamsets_per_run[n_run])
     
     np.save(args.path_Mpx, np.array(Mpx))
-
-

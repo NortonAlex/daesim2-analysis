@@ -112,7 +112,6 @@ class Args:
         object.__setattr__(s, 'sowing_dates', [Timestamp(date) for date in s.sowing_dates])
         object.__setattr__(s, 'harvest_dates', [Timestamp(date) for date in s.harvest_dates])
 
-
     @staticmethod
     def from_cli() -> 'Args':
         parser = ArgumentParser()
@@ -165,6 +164,3 @@ class Args:
             paths_df_forcing=args.paths_df_forcing.split(','),
             path_parameters_file=args.path_parameters_file
         )
-
-
-
