@@ -43,7 +43,7 @@ class ForcingData:
 
     sowing_days             : np.ndarray = field(init=False)
     sowing_years            : np.ndarray = field(init=False)
-    harvest_days            : np.ndarray = field(init=False)
+    # harvest_days            : np.ndarray = field(init=False)
     harvest_years           : np.ndarray = field(init=False)
     reset_days              : list[np.uint64] = field(init=False)
     zero_crossing_indices   : list[int] = field(default_factory=lambda: [4, 5, 6])

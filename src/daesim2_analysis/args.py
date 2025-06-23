@@ -1,12 +1,18 @@
+from .daesim_module_args import DAESIMModuleArgs
 from argparse import ArgumentParser
 from typing_extensions import Self
 from dataclasses import dataclass
 from dataclasses import field
 from pandas import Timestamp
+from typing import Any, Dict
 from datetime import date
 from os.path import join
 from os import makedirs
+from functools import partial
+import attr
 import sys
+
+from daesim.management import ManagementModule
 
 def is_interactive() -> bool: return hasattr(sys, 'ps1') or sys.flags.interactive
 
@@ -24,66 +30,8 @@ class Args:
     paths_df_forcing        : list[str] = field(default_factory=lambda: ['DAESIM_data/DAESim_forcing_data/Rutherglen_1971.csv'])
     path_parameters_file    : str = 'parameters/Fast1.json'
 
-    ## ManagementX
-    phases                  : list[str] = field(default_factory=lambda: ["germination", "vegetative", "spike", "anthesis", "grainfill", "maturity"])
-    gdd_requirements        : list[int] = field(default_factory=lambda: [50,800,280,150,300,300])
-    vd_requirements         : list[int] = field(default_factory=lambda: [0, 30, 0, 0, 0, 0])
-    allocation_coeffs       : list[list[float]] = field(
-                                default_factory=lambda: [
-                                    [0.2, 0.1, 0.7, 0.0, 0.0],
-                                    [0.5, 0.1, 0.4, 0.0, 0.0],
-                                    [0.30, 0.4, 0.30, 0.0, 0.0],
-                                    [0.30, 0.4, 0.30, 0.0, 0.0],
-                                    [0.1, 0.1, 0.1, 0.7, 0.0],
-                                    [0.1, 0.1, 0.1, 0.7, 0.0]
-                                ]
-                            )
-    turnover_rates          : list[list[float]] = field(
-                                default_factory=lambda: [
-                                    [0.001,  0.001, 0.001, 0.0, 0.0],
-                                    [0.01, 0.002, 0.008, 0.0, 0.0],
-                                    [0.01, 0.002, 0.008, 0.0, 0.0],
-                                    [0.01, 0.002, 0.008, 0.0, 0.0],
-                                    [0.033, 0.016, 0.033, 0.0002, 0.0],
-                                    [0.10, 0.033, 0.10, 0.0002, 0.0]
-                                ]
-                            )
+    management              : DAESIMModuleArgs = field(default_factory=partial(DAESIMModuleArgs, ManagementModule))
     
-    ## LeafGasExchangeModule2
-    Jmax_opt_rVcmax         : float = 0.89
-    Jmax_opt_rVcmax_method  : str = 'log'
-
-    ## SoilLayers Args
-    nlevmlsoil              : int = 6
-    z_max                   : float = 0.66
-    z_top                   : float = 0.10
-    discretise_method       : str = 'horizon'
-    z_horizon               : list[float] = field(default_factory=lambda: [0.06, 0.06, 0.06, 0.10, 0.10, 0.28])
-    Psi_e                   : list[float] = field(default_factory=lambda: [-1.38E-03, -1.38E-03, -1.38E-03, -1.32E-03, -2.58E-03, -0.960E-03])
-    b_soil                  : list[float] = field(default_factory=lambda: [4.74, 4.74, 4.74, 6.77, 8.17, 10.73])
-    K_sat                   : list[float] = field(default_factory=lambda: [29.7, 29.7, 29.7, 25.2, 13.9, 40.9])
-    soilThetaMax            : list[float] = field(default_factory=lambda: [0.12, 0.12, 0.12, 0.20, 0.3, 0.4])
-
-    ## PlantCH20X
-    maxLAI                  : float = 6.5
-    ksr_coeff               : int = 1500
-    SLA                     : float = 0.02
-    sf                      : float = 1.0
-    Psi_f                   : float = -5.0
-
-    ## PlantXModuleCalculator
-    GDD_method              : str = 'nonlinear'
-    GDD_Tbase               : float = 0.0
-    GDD_Topt                : float = 22.5
-    GDD_Tupp                : float = 35.0
-
-    d_r_max                 : float = 2.0
-    Vmaxremob               : float = 3.0
-    Kmremob                 : float = 0.5
-    remob_phase             : list[str] = field(default_factory=lambda:['grainfill','maturity'])
-    specified_phase         : str = 'spike'
-    grainfill_phase         : str = field(default_factory=lambda:['grainfill','maturity'])
-
     xsite                   : str = field(init=False)
     title                   : str = field(init=False)
     description             : str = field(init=False)
