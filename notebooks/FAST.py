@@ -43,6 +43,7 @@ ForcingDataX = experiment.ForcingData(
     harvest_dates=experiment.harvest_dates,
     df=load_df_forcing(experiment.paths_df_forcing)
 )
+
 ManagementX = experiment.ManagementModule(
     cropType=experiment.crop_type,
     sowingDays=ForcingDataX.sowing_days,
@@ -54,80 +55,77 @@ PlantDevX = experiment.PlantGrowthPhases()
 BoundaryLayerX = experiment.BoundayLayerModule(Site=SiteX)
 LeafX = experiment.LeafExchangeModule2(Site=SiteX)
 CanopyX = experiment.CanopyLayers()
-# CanopyRadX = args.canopy_rad.create(Canopy=CanopyX)
-# CanopyGasExchangeX = args.canopy_gas_exchange.create(Leaf=LeafX, Canopy=CanopyX, CanopyRad=CanopyRadX)
-# SoilLayersX = args.soil_layers.create(nlevmlsoil=6)
-# PlantCH2OX = args.plant_ch2o.create(
-#     Site=SiteX,
-#     SoilLayers=SoilLayersX,
-#     CanopyGasExchange=CanopyGasExchangeX,
-#     BoundaryLayer=BoundaryLayerX
-# )
-# PlantAllocX = args.plant_optimal_allocation.create(Plant=PlantCH2OX)
-# PlantX = args.plant_module_calculator.create(
-#     Site=SiteX,
-#     Management=ManagementX,
-#     PlantDev=PlantDevX,
-#     PlantCH2O = PlantCH2OX,
-#     PlantAlloc=PlantAllocX
-# )
-# PlantXCalc = PlantX.calculate
-# Model = ODEModelSolver(
-#     calculator=PlantXCalc,
-#     states_init=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-#     time_start=forcing_data.time_axis[0],
-#     log_diagnostics=True
-# )
+CanopyRadX = experiment.CanopyRadiation(Canopy=CanopyX)
+CanopyGasExchangeX = experiment.CanopyGasExchange(Leaf=LeafX, Canopy=CanopyX, CanopyRad=CanopyRadX)
+SoilLayersX = experiment.SoilLayers(nlevmlsoil=6)
+PlantCH2OX = experiment.PlantCH2O(
+    Site=SiteX,
+    SoilLayers=SoilLayersX,
+    CanopyGasExchange=CanopyGasExchangeX,
+    BoundaryLayer=BoundaryLayerX
+)
+PlantAllocX = experiment.PlantOptimalAllocation(Plant=PlantCH2OX)
+PlantX = experiment.PlantModuleCalculator(
+    Site=SiteX,
+    Management=ManagementX,
+    PlantDev=PlantDevX,
+    PlantCH2O = PlantCH2OX,
+    PlantAlloc=PlantAllocX
+)
+PlantXCalc = PlantX.calculate
+Model = ODEModelSolver(
+    calculator=PlantXCalc,
+    states_init=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    time_start=ForcingDataX.time_axis[0],
+    log_diagnostics=True
+)
 
-# input_data = [
-#     ODEModelSolver,
-#     forcing_data.time_axis,
-#     forcing_data.time_index,
-#     forcing_data.inputs,
-#     forcing_data.reset_days,
-#     forcing_data.zero_crossing_indices
-# ]
-# Mpx = []
-# iparamsets_per_run = get_iparamsets_per_run(param_values, args.n_processes)
-# n_runs = len(iparamsets_per_run)
-# Mpx_column_headers = "nparamset,W_P_peakW,W_L_peakW,W_R_peakW,W_S_peakW,W_S_spike0,W_S_anth0,GPP_int_seas,NPP_int_seas,Rml_int_seas,Rmr_int_seas,Rg_int_seas,trflux_int_seas,FCstem2grain_int_seas,NPP2grain_int_seas,E_int_seas,LAI_peakW,W_spike_anth1,GY_mature,Sdpot_mature,GN_mature" 
+input_data = [
+    ODEModelSolver,
+    ForcingDataX.time_axis,
+    ForcingDataX.time_index,
+    ForcingDataX.inputs,
+    ForcingDataX.reset_days,
+    ForcingDataX.zero_crossing_indices
+]
+Mpx = []
+iparamsets_per_run = get_iparamsets_per_run(param_values, experiment.n_processes)
+n_runs = len(iparamsets_per_run)
+Mpx_column_headers = "nparamset,W_P_peakW,W_L_peakW,W_R_peakW,W_S_peakW,W_S_spike0,W_S_anth0,GPP_int_seas,NPP_int_seas,Rml_int_seas,Rmr_int_seas,Rg_int_seas,trflux_int_seas,FCstem2grain_int_seas,NPP2grain_int_seas,E_int_seas,LAI_peakW,W_spike_anth1,GY_mature,Sdpot_mature,GN_mature" 
 
-# def evaluate_iparamset(iparamset: int):
-#     nparamset = iparamset + 1
-#     paramset = param_values[iparamset]
-#     # model_output = fastsa.update_and_run_model(paramset, PlantX, input_data, parameters_df, problem)
-#     model_output = fastsa.update_and_run_model(
-#         paramset,
-#         PlantX,
-#         input_data,
-#         parameters.df,
-#         parameters.problem
-#     )
-#     Mpxi, diagnostics = model_output[0], model_output[1]
+def evaluate_iparamset(iparamset: int):
+    nparamset = iparamset + 1
+    paramset = param_values[iparamset]
+    # model_output = fastsa.update_and_run_model(paramset, PlantX, input_data, parameters_df, problem)
+    model_output = fastsa.update_and_run_model(
+        paramset,
+        PlantX,
+        input_data,
+        parameters.df,
+        parameters.problem
+    )
+    Mpxi, diagnostics = model_output[0], model_output[1]
 
-#     nsigfigures = len(str(np.shape(param_values)[0]))
-#     filename_write = f"FAST_results_{args.xsite}_paramset{nparamset:0{nsigfigures}}.nc"
-#     daesim_io_write_diag_to_nc(
-#       PlantX,
-#       diagnostics,
-#       args.dir_xsite_parameters + '/',
-#       filename_write,
-#       forcing_data.time_index,
-#       problem=parameters.problem,
-#       param_values=paramset,
-#       nc_attributes={'title': args.title, 'description': args.description}
-#     )
-#     return np.insert(Mpxi, 0, nparamset)
+    nsigfigures = len(str(np.shape(param_values)[0]))
+    filename_write = f"FAST_results_{experiment.xsite}_paramset{nparamset:0{nsigfigures}}.nc"
+    daesim_io_write_diag_to_nc(
+      PlantX,
+      diagnostics,
+      experiment.dir_xsite_parameters + '/',
+      filename_write,
+      forcing_data.time_index,
+      problem=parameters.problem,
+      param_values=paramset,
+      nc_attributes={'title': experiment.title, 'description': experiment.description}
+    )
+    return np.insert(Mpxi, 0, nparamset)
 
-# if __name__ == '__main__':
-#     print(args.dir_xsite_FAST_results)
-#     print(args.dir_xsite_parameters)
-#     for n_run in range(n_runs):
-#         with Pool(processes=args.n_processes) as pool:
-#             Mpx += pool.map(evaluate_iparamset, iparamsets_per_run[n_run])
-
-#             print(Mpx)
-#             break
+if __name__ == '__main__':
+    for n_run in range(n_runs):
+        with Pool(processes=experiment.n_processes) as pool:
+            Mpx += pool.map(evaluate_iparamset, iparamsets_per_run[n_run])
+            print(Mpx)
+            break
     
 
 
