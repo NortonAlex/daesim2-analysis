@@ -13,6 +13,40 @@ import attr
 import sys
 
 from daesim.management import ManagementModule
+from daesim.plantgrowthphases import PlantGrowthPhases
+from daesim.boundarylayer import BoundaryLayerModule
+from daesim.leafgasexchange2 import LeafGasExchangeModule2
+from daesim.canopygasexchange import CanopyGasExchange
+from daesim.plantcarbonwater import PlantModel as PlantCH2O
+from daesim.plantallocoptimal import PlantOptimalAllocation
+from daesim.canopylayers import CanopyLayers
+from daesim.canopyradiation import CanopyRadiation
+from daesim.soillayers import SoilLayers
+from daesim.plant_1000 import PlantModuleCalculator
+from daesim.utils import ODEModelSolver
+
+PlantGrowthPhasesArgs = DAESIMModuleArgs(
+    module=PlantGrowthPhases,
+    phases = ["germination", "vegetative", "spike", "anthesis", "grainfill", "maturity"],
+    gdd_requirements=[50,800,280,150,300,300],
+    vd_requirements=[0, 30, 0, 0, 0, 0],
+    allocation_coeffs=[
+        [0.2, 0.1, 0.7, 0.0, 0.0],
+        [0.5, 0.1, 0.4, 0.0, 0.0],
+        [0.30, 0.4, 0.30, 0.0, 0.0],
+        [0.30, 0.4, 0.30, 0.0, 0.0],
+        [0.1, 0.1, 0.1, 0.7, 0.0],
+        [0.1, 0.1, 0.1, 0.7, 0.0]
+    ],
+    turnover_rates=[
+        [0.001,  0.001, 0.001, 0.0, 0.0],
+        [0.01, 0.002, 0.008, 0.0, 0.0],
+        [0.01, 0.002, 0.008, 0.0, 0.0],
+        [0.01, 0.002, 0.008, 0.0, 0.0],
+        [0.033, 0.016, 0.033, 0.0002, 0.0],
+        [0.10, 0.033, 0.10, 0.0002, 0.0]
+    ]
+)
 
 def is_interactive() -> bool: return hasattr(sys, 'ps1') or sys.flags.interactive
 
@@ -30,8 +64,19 @@ class Args:
     paths_df_forcing        : list[str] = field(default_factory=lambda: ['DAESIM_data/DAESim_forcing_data/Rutherglen_1971.csv'])
     path_parameters_file    : str = 'parameters/Fast1.json'
 
-    management              : DAESIMModuleArgs = field(default_factory=partial(DAESIMModuleArgs, ManagementModule))
-    
+    management              : DAESIMModuleArgs = field(default_factory=partial(DAESIMModuleArgs, module=ManagementModule))
+    # plant_growth_phases     : DAESIMModuleArgs = field(default_factory=partial(DAESIMModuleArgs, PlantGrowthPhases, phases=["germination", "vegetative", "spike", "anthesis", "grainfill", "maturity"], gdd_requirements=[50,800,280,150,300,300], vd_requirements=[0, 30, 0, 0, 0, 0]), )
+    plant_growth_phases     : DAESIMModuleArgs = field(default_factory=lambda: PlantGrowthPhasesArgs)
+    boundary_layer          : DAESIMModuleArgs = field(default_factory=partial(DAESIMModuleArgs, BoundaryLayerModule))
+    leaf_exchange           : DAESIMModuleArgs = field(default_factory=partial(DAESIMModuleArgs, LeafGasExchangeModule2))
+    canopy                  : DAESIMModuleArgs = field(default_factory=partial(DAESIMModuleArgs, CanopyLayers))
+    canopy_rad              : DAESIMModuleArgs = field(default_factory=partial(DAESIMModuleArgs, CanopyRadiation))
+    plant_ch2o              : DAESIMModuleArgs = field(default_factory=partial(DAESIMModuleArgs, PlantCH2O))
+    plant_optimal_allocation: DAESIMModuleArgs = field(default_factory=partial(DAESIMModuleArgs, PlantOptimalAllocation))
+    canopy_gas_exchange     : DAESIMModuleArgs = field(default_factory=partial(DAESIMModuleArgs, CanopyGasExchange))
+    soil_layers             : DAESIMModuleArgs = field(default_factory=partial(DAESIMModuleArgs, SoilLayers))
+    plant_module_calculator : DAESIMModuleArgs = field(default_factory=partial(DAESIMModuleArgs, PlantModuleCalculator))
+
     xsite                   : str = field(init=False)
     title                   : str = field(init=False)
     description             : str = field(init=False)

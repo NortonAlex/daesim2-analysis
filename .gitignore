@@ -167,4 +167,6 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
-'DAESIM_data/'
+DAESIM_data/
+parameters/
+results/
