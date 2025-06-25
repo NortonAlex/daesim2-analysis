@@ -124,9 +124,4 @@ if __name__ == '__main__':
     for n_run in range(n_runs):
         with Pool(processes=experiment.n_processes) as pool:
             Mpx += pool.map(evaluate_iparamset, iparamsets_per_run[n_run])
-            print(Mpx)
-            break
     
-
-
-
