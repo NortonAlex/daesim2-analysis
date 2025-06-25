@@ -125,8 +125,9 @@ if __name__ == '__main__':
     print(args.dir_xsite_parameters)
     for n_run in range(n_runs):
         with Pool(processes=args.n_processes) as pool:
-            Mpx+= = pool.map(evaluate_iparamset, iparamsets_per_run[n_run])
-            print(result)
+            Mpx += pool.map(evaluate_iparamset, iparamsets_per_run[n_run])
+
+            print(Mpx)
             break
     
 
