@@ -7,7 +7,6 @@ from datetime import date
 from os import makedirs
 from os.path import join
 
-from .daesim_module_args import DAESIMModuleArgs
 from daesim.management import ManagementModule
 from daesim.plantgrowthphases import PlantGrowthPhases
 from daesim.boundarylayer import BoundaryLayerModule
@@ -20,12 +19,15 @@ from daesim.canopyradiation import CanopyRadiation
 from daesim.soillayers import SoilLayers
 from daesim.plant_1000 import PlantModuleCalculator
 from daesim.utils import ODEModelSolver
-
+from daesim.climate import *
+from functools import partial
+from daesim2_analysis.forcing_data import ForcingData
+from daesim2_analysis.daesim_module_partial_load import DAESIMModulePartialLoad
 
 def is_interactive() -> bool: return hasattr(sys, 'ps1') or sys.flags.interactive
 
-PlantGrowthPhasesArgs = DAESIMModuleArgs(
-    module=PlantGrowthPhases,
+PlantDevXPartialLoad = DAESIMModulePartialLoad(
+    PlantGrowthPhases,
     phases=["germination","vegetative","spike","anthesis","grainfill","maturity"],
     gdd_requirements=[50,800,280,150,300,300],
     vd_requirements=[0,30,0,0,0,0],
@@ -48,7 +50,7 @@ PlantGrowthPhasesArgs = DAESIMModuleArgs(
 )
 
 @attr.define(frozen=True)
-class Args:
+class Experiment:
     CLatDeg                 : float = -36.05
     CLonDeg                 : float = 146.5
     tz                      : int = 10
@@ -61,17 +63,19 @@ class Args:
     paths_df_forcing        : list[str] = attr.Factory(lambda: ["DAESIM_data/DAESim_forcing_data/Rutherglen_1971.csv"])
     path_parameters_file    : str = "parameters/Fast1.json"
 
-    management              : DAESIMModuleArgs = DAESIMModuleArgs(ManagementModule)
-    plant_growth_phases     : DAESIMModuleArgs = PlantGrowthPhasesArgs
-    boundary_layer          : DAESIMModuleArgs = DAESIMModuleArgs(module=BoundaryLayerModule)
-    leaf_exchange           : DAESIMModuleArgs = DAESIMModuleArgs(module=LeafGasExchangeModule2)
-    canopy                  : DAESIMModuleArgs = DAESIMModuleArgs(module=CanopyLayers)
-    canopy_rad              : DAESIMModuleArgs = DAESIMModuleArgs(module=CanopyRadiation)
-    canopy_gas_exchange     : DAESIMModuleArgs = DAESIMModuleArgs(module=CanopyGasExchange)
-    plant_ch2o              : DAESIMModuleArgs = DAESIMModuleArgs(module=PlantCH2O)
-    plant_optimal_allocation: DAESIMModuleArgs = DAESIMModuleArgs(module=PlantOptimalAllocation)
-    soil_layers             : DAESIMModuleArgs = DAESIMModuleArgs(module=SoilLayers)
-    plant_module_calculator : DAESIMModuleArgs = DAESIMModuleArgs(module=PlantModuleCalculator)
+    ClimateModule           : DAESIMModulePartialLoad = DAESIMModulePartialLoad(ClimateModule)
+    ManagementModule        : DAESIMModulePartialLoad = DAESIMModulePartialLoad(ManagementModule)
+    ForcingData             : DAESIMModulePartialLoad = DAESIMModulePartialLoad(ForcingData)
+    PlantGrowthPhases       : DAESIMModulePartialLoad = PlantDevXPartialLoad
+    CanopyLayers            : DAESIMModulePartialLoad = DAESIMModulePartialLoad(CanopyLayers, nlevmlcan=3)
+    BoundayLayerModule      : DAESIMModulePartialLoad = DAESIMModulePartialLoad(BoundaryLayerModule)
+    LeafExchangeModule2     : DAESIMModulePartialLoad = DAESIMModulePartialLoad(LeafGasExchangeModule2)
+    # canopy_rad              : DAESIMModuleArgs = DAESIMModuleArgs(module=CanopyRadiation)
+    # canopy_gas_exchange     : DAESIMModuleArgs = DAESIMModuleArgs(module=CanopyGasExchange)
+    # plant_ch2o              : DAESIMModuleArgs = DAESIMModuleArgs(module=PlantCH2O)
+    # plant_optimal_allocation: DAESIMModuleArgs = DAESIMModuleArgs(module=PlantOptimalAllocation)
+    # soil_layers             : DAESIMModuleArgs = DAESIMModuleArgs(module=SoilLayers)
+    # plant_module_calculator : DAESIMModuleArgs = DAESIMModuleArgs(module=PlantModuleCalculator)
 
     xsite                   : str = attr.field(init=False)
     title                   :  str = attr.field(init=False)
@@ -97,7 +101,7 @@ class Args:
         object.__setattr__(self, 'harvest_dates', [Timestamp(d) for d in self.harvest_dates])
 
     @staticmethod
-    def from_cli() -> 'Args':
+    def from_cli() -> 'Experiment':
         parser = ArgumentParser()
         g1 = parser.add_argument_group('Optimisation Arguments')
         g1.add_argument('--n_processes', type=int, required=True)
@@ -109,7 +113,8 @@ class Args:
         g2.add_argument('--path_parameters_file', type=str, required=True)
         ns = parser.parse_args()
         paths = ns.paths_df_forcing.split(',')
-        return Args(
+
+        return Experiment(
             n_processes=ns.n_processes,
             n_samples=ns.n_samples,
             dir_results=ns.dir_results,
