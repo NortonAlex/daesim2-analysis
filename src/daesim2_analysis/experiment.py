@@ -55,8 +55,8 @@ class Experiment:
     CLonDeg                 : float = 146.5
     tz                      : int = 10
     crop_type               : str = "Wheat"
-    sowing_dates            : list[date] = attr.Factory(lambda: [date(1971,5,11)])
-    harvest_dates           : list[date] = attr.Factory(lambda: [date(1971,12,23)])
+    sowing_dates            : list[date] = attr.Factory(lambda: [date(2018,1,1)])
+    harvest_dates           : list[date] = attr.Factory(lambda: [date(2018, 12, 31)])
     n_processes             : int = 1
     n_samples               : int = 100
     dir_results             : str = "DAESIM_data/FAST_results"
@@ -121,3 +121,4 @@ class Experiment:
             paths_df_forcing=paths,
             path_parameters_file=ns.path_parameters_file
         )
+        

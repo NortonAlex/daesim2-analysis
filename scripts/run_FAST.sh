@@ -16,7 +16,7 @@ cd $wd
 n_processes=24
 n_samples=100
 dir_results=results
-path_df_forcing_1=DAESIM_data/DAESim_forcing_data/Rutherglen_1971.csv
+path_df_forcing_1=DAESIM_data/DAESim_forcing_data/DAESim_forcing_Milgadara_2018.csv
 paths_df_forcing=("$path_df_forcing_1")
 path_parameters_file=parameters/Fast1.json
 crop=wheat
