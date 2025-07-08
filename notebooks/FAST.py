@@ -31,63 +31,10 @@ from daesim2_analysis.forcing_data import ForcingData
 experiment = Experiment.from_cli() if not is_interactive() else Experiment()
 
 # %%
-parameters: Parameters = Parameters.__from_file__(experiment.path_parameters_file)
+parameters: Parameters = experiment.parameters
 param_values = parameters.sample(experiment.n_samples)
 
 # %%
-
-SiteX = experiment.ClimateModule(CLatDeg=experiment.CLatDeg,CLonDeg=experiment.CLonDeg,timezone=experiment.tz)
-ForcingDataX = experiment.ForcingData(
-    SiteX=SiteX,
-    sowing_dates=experiment.sowing_dates,
-    harvest_dates=experiment.harvest_dates,
-    df=load_df_forcing(experiment.paths_df_forcing)
-)
-
-ManagementX = experiment.ManagementModule(
-    cropType=experiment.crop_type,
-    sowingDays=ForcingDataX.sowing_days,
-    harvestDays=ForcingDataX.harvest_dates,
-    sowingYears=ForcingDataX.sowing_years,
-    harvestYears=ForcingDataX.harvest_years,
-)
-PlantDevX = experiment.PlantGrowthPhases()
-BoundaryLayerX = experiment.BoundayLayerModule(Site=SiteX)
-LeafX = experiment.LeafExchangeModule2(Site=SiteX)
-CanopyX = experiment.CanopyLayers()
-CanopyRadX = experiment.CanopyRadiation(Canopy=CanopyX)
-CanopyGasExchangeX = experiment.CanopyGasExchange(Leaf=LeafX, Canopy=CanopyX, CanopyRad=CanopyRadX)
-SoilLayersX = experiment.SoilLayers(nlevmlsoil=ForcingDataX.nlevmlsoil)
-PlantCH2OX = experiment.PlantCH2O(
-    Site=SiteX,
-    SoilLayers=SoilLayersX,
-    CanopyGasExchange=CanopyGasExchangeX,
-    BoundaryLayer=BoundaryLayerX
-)
-PlantAllocX = experiment.PlantOptimalAllocation(Plant=PlantCH2OX)
-PlantX = experiment.PlantModuleCalculator(
-    Site=SiteX,
-    Management=ManagementX,
-    PlantDev=PlantDevX,
-    PlantCH2O = PlantCH2OX,
-    PlantAlloc=PlantAllocX
-)
-PlantXCalc = PlantX.calculate
-Model = ODEModelSolver(
-    calculator=PlantXCalc,
-    states_init=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-    time_start=ForcingDataX.time_axis[0],
-    log_diagnostics=True
-)
-
-input_data = [
-    ODEModelSolver,
-    ForcingDataX.time_axis,
-    ForcingDataX.time_index,
-    ForcingDataX.inputs,
-    ForcingDataX.reset_days,
-    ForcingDataX.zero_crossing_indices
-]
 Mpx = []
 iparamsets_per_run = get_iparamsets_per_run(param_values, experiment.n_processes)
 n_runs = len(iparamsets_per_run)
@@ -99,8 +46,8 @@ def evaluate_iparamset(iparamset: int):
     # model_output = fastsa.update_and_run_model(paramset, PlantX, input_data, parameters_df, problem)
     model_output = fastsa.update_and_run_model(
         paramset,
-        PlantX,
-        input_data,
+        experiment.PlantX,
+        experiment.input_data,
         parameters.df,
         parameters.problem
     )
@@ -109,11 +56,11 @@ def evaluate_iparamset(iparamset: int):
     nsigfigures = len(str(np.shape(param_values)[0]))
     filename_write = f"FAST_results_{experiment.xsite}_paramset{nparamset:0{nsigfigures}}.nc"
     daesim_io_write_diag_to_nc(
-      PlantX,
+      experiment.PlantX,
       diagnostics,
       experiment.dir_xsite_parameters + '/',
       filename_write,
-      forcing_data.time_index,
+      experiment.ForcingDataX.time_index,
       problem=parameters.problem,
       param_values=paramset,
       nc_attributes={'title': experiment.title, 'description': experiment.description}
