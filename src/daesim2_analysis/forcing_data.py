@@ -10,66 +10,64 @@ import numpy as np
 
 @dataclass(frozen=True)
 class ForcingData:
-    SiteX                       : ClimateModule
-    sowing_dates                : list[date]
-    harvest_dates               : list[date]
-    df                          : DataFrame
-    df_type_1_cols              : list[str] = field(default_factory=lambda: [
-                                        'Global Radiation',
-                                        'Diffuse Radiation',
-                                        'Atmospheric CO2 Concentration (bar)',
-                                        'Relative Humidity',
-                                        "Soil moisture 5 cm",
-                                        "Soil moisture 8 cm"
-                                        "Soil moisture 14 cm"
-                                        "Soil moisture 22 cm"
-                                        "Soil moisture 34 cm"
-                                        "Soil moisture 52 cm"
-                                    ]
-                                )
-    nlevmlsoil                  : int = 2
-    df_type_2_cols              : list[str] = field(default_factory=lambda: ['SRAD', 'VPeff'])
-    df_common_cols              : list[str] = field(default_factory=lambda: [
+    SiteX                           : ClimateModule
+    sowing_dates                    : list[date]
+    harvest_dates                   : list[date]
+    df                              : DataFrame
+    df_type_1_cols                  : list[str] = field(default_factory=lambda: [
+                                            'Global Radiation',
+                                            'Diffuse Radiation',
+                                            'Atmospheric CO2 Concentration (bar)',
+                                            'Relative Humidity',
+                                            "Soil moisture 5 cm",
+                                            "Soil moisture 8 cm"
+                                            "Soil moisture 14 cm"
+                                            "Soil moisture 22 cm"
+                                            "Soil moisture 34 cm"
+                                            "Soil moisture 52 cm"
+                                        ]
+                                    )
+    nlevmlsoil                      : int = 2
+    df_type_2_cols                  : list[str] = field(default_factory=lambda: ['SRAD', 'VPeff'])
+    df_common_cols                  : list[str] = field(default_factory=lambda: [
                                         'Maximum temperature',
                                         'Minimum temperature',
                                         'Uavg'
                                     ]
-                                )
+                                    )
 
-    df_type                     : str = field(init=False)
-    diffuse_fraction            : float = 0.2
-    uniform_cross_layer_moisture: bool = False
-    start_doy_f                 : int = field(init=False)
-    start_year_f                : int = field(init=False)
-    nrundays_f                  : int = field(init=False)
+    df_type                         : str = field(init=False)
+    diffuse_fraction                : float = 0.2
+    uniform_moisture_across_layers  : bool = False
+    start_doy_f                     : int = field(init=False)
+    start_year_f                    : int = field(init=False)
+    nrundays_f                      : int = field(init=False)
+    time_nday_f                     : list[int] = field(init=False)
+    time_doy_f                      : list[float] = field(init=False)
+    time_year_f                     : list[int] = field(init=False)
+    time_index_f                    : list[int] = field(init=False)
+    _soilTheta_z                    : np.ndarray = field(init=False)
 
-    time_nday_f                 : list[int] = field(init=False)
-    time_doy_f                  : list[float] = field(init=False)
-    time_year_f                 : list[int] = field(init=False)
-    time_index_f                : list[int] = field(init=False)
+    Climate_doy_f                   : np.ndarray = field(init=False)
+    Climate_year_f                  : np.ndarray = field(init=False)
+    Climate_airTempCMin_f           : np.ndarray = field(init=False)
+    Climate_airTempCMax_f           : np.ndarray = field(init=False)
+    Climate_airTempC_f              : np.ndarray = field(init=False)
+    Climate_solRadswskyb_f          : np.ndarray = field(init=False)
+    Climate_solRadswskyd_f          : np.ndarray = field(init=False) 
+    Climate_airPressure_f           : np.ndarray = field(init=False)
+    Climate_airRH_f                 : np.ndarray = field(init=False)
+    Climate_airU_f                  : np.ndarray = field(init=False)
+    Climate_airCO2_f                : np.ndarray = field(init=False)
+    Climate_airO2_f                 : np.ndarray = field(init=False)
+    Climate_soilTheta_z_f           : np.ndarray = field(init=False) 
+    Climate_nday_f                  : np.ndarray = field(init=False)
 
-    _soilTheta_z                : np.ndarray = field(init=False)
-
-    Climate_doy_f               : np.ndarray = field(init=False)
-    Climate_year_f              : np.ndarray = field(init=False)
-    Climate_airTempCMin_f       : np.ndarray = field(init=False)
-    Climate_airTempCMax_f       : np.ndarray = field(init=False)
-    Climate_airTempC_f          : np.ndarray = field(init=False)
-    Climate_solRadswskyb_f      : np.ndarray = field(init=False)
-    Climate_solRadswskyd_f      : np.ndarray = field(init=False) 
-    Climate_airPressure_f       : np.ndarray = field(init=False)
-    Climate_airRH_f             : np.ndarray = field(init=False)
-    Climate_airU_f              : np.ndarray = field(init=False)
-    Climate_airCO2_f            : np.ndarray = field(init=False)
-    Climate_airO2_f             : np.ndarray = field(init=False)
-    Climate_soilTheta_z_f       : np.ndarray = field(init=False) 
-    Climate_nday_f              : np.ndarray = field(init=False)
-
-    sowing_days                 : np.ndarray = field(init=False)
-    sowing_years                : np.ndarray = field(init=False)
-    harvest_years               : np.ndarray = field(init=False)
-    reset_days                  : list[np.uint64] = field(init=False)
-    zero_crossing_indices       : list[int] = field(default_factory=lambda: [4, 5, 6])
+    sowing_days                     : np.ndarray = field(init=False)
+    sowing_years                    : np.ndarray = field(init=False)
+    harvest_years                   : np.ndarray = field(init=False)
+    reset_days                      : list[np.uint64] = field(init=False)
+    zero_crossing_indices           : list[int] = field(default_factory=lambda: [4, 5, 6])
 
     def set_df_type(s: Self):
         if all(col in s.df.columns for col in s.df_type_1_cols + s.df_common_cols):
@@ -109,10 +107,16 @@ class ForcingData:
         except Exception as e: raise ValueError('Sowing date before the earliest date in forcing dataframe')
 
     def generate_forcing_inputs(s: Self):
-        if s.df_type == '1': # MILGADARA
-            num_moisture_cols = len(df[[c for c in s.df.columns if c.lower().startswith('soil moisture')]])
+        if s.df_type == '1': # RUTHERGLEN
+            moistures = s.df[[c for c in s.df.columns if c.lower().startswith('soil moisture')]]
+            _soilTheta_z = np.column_stack(moistures.values)
+        
+        ### CALCULATE SYNTHETIC SUBSTITUTES WHEN DATA COLUMNS ABSENT
+
+        if s.df_type == '2': # MILGADARA
+            num_moisture_cols = len([c for c in s.df.columns if c.lower().startswith('soil moisture')])
             if num_moisture_cols == 0:
-                _soilTheta =  0.35*np.ones(nrundays_f)
+                _soilTheta =  0.35*np.ones(s.nrundays_f)
             else:
                 soil_moisture_interp = s.df['Soil moisture'].interpolate('quadratic')
                 f_soilTheta_min = 0.25
@@ -126,44 +130,56 @@ class ForcingData:
                 _soilTheta = f_soilTheta_norm
             
             if s.uniform_moisture_across_layers:
-                nlevmlsoil = 2
-                _soilTheta_z = np.repeat(_soilTheta[:, np.newaxis], nlevmlsoil, axis=1)
+                _soilTheta_z = np.repeat(_soilTheta[:, np.newaxis], s.nlevmlsoil, axis=1)
             else:
                 _soilTheta_z0 = _soilTheta-0.06
                 _soilTheta_z1 = _soilTheta+0.02
                 _soilTheta_z = np.column_stack((_soilTheta_z0, _soilTheta_z1))
 
-        if s.df_type == '2': # RUTHERGLEN
-            moistures = s.df[[c for c in df.columns if c.lower().startswith('soil moisture')]]
-            _soilTheta_z = np.column_stack(column_stack(moistures.values))
-
-        if sd.df_type == '1':
-            _Rsb_Wm2 = (1-diffuse_fraction) * df_forcing["SRAD"].values * 1e6 / (60*60*24)
-            _Rsd_Wm2 = diffuse_fraction * df_forcing["SRAD"].values * 1e6 / (60*60*24)
-
             ## Create synthetic data for other forcing variables
-            _p = 101325*np.ones(nrundays_f)
-            _es = SiteX.compute_sat_vapor_pressure_daily(df_forcing["Minimum temperature"].values,df_forcing["Maximum temperature"].values)
-            _RH = SiteX.compute_relative_humidity(df_forcing["VPeff"].values/10,_es/1000)
+            _Rsb_Wm2 = (1-s.diffuse_fraction) * s.df["SRAD"].values * 1e6 / (60*60*24)
+            _Rsd_Wm2 = s.diffuse_fraction * s.df["SRAD"].values * 1e6 / (60*60*24)
+
+            _p = 101325*np.ones(s.nrundays_f)
+            _es = s.SiteX.compute_sat_vapor_pressure_daily(s.df["Minimum temperature"].values, s.df["Maximum temperature"].values)
+            _RH = s.SiteX.compute_relative_humidity(s.df["VPeff"].values/10,_es/1000)
             _RH[_RH > 100] = 100
             _CO2 = 400*(_p/1e5)*1e-6     ## carbon dioxide partial pressure (bar)
             _O2 = 209000*(_p/1e5)*1e-6   ## oxygen partial pressure (bar)
-            
-            Climate_doy_f = interp_forcing(s.time_nday_f, s.time_doy_f, kind="pconst", fill_value=(s.time_doy_f[0], s.time_doy_f[-1]))
+
+            Climate_doy_f = interp_forcing(s.time_nday_f, s.time_doy_f, kind="pconst", fill_value=(s.time_doy_f[0],s.time_doy_f[-1]))
             Climate_year_f = interp_forcing(s.time_nday_f, s.time_year_f, kind="pconst", fill_value=(s.time_year_f[0],s.time_year_f[-1]))
             Climate_airTempCMin_f = interp1d(s.time_nday_f, s.df["Minimum temperature"].values)
             Climate_airTempCMax_f = interp1d(s.time_nday_f, s.df["Maximum temperature"].values)
             Climate_airTempC_f = interp1d(s.time_nday_f, (s.df["Minimum temperature"].values+s.df["Maximum temperature"].values)/2)
-            Climate_solRadswskyb_f = interp1d(s.time_nday_f, 10*(s.df["Global Radiation"].values-s.df["Diffuse Radiation"].values))
-            Climate_solRadswskyd_f = interp1d(s.time_nday_f, 10*s.df["Diffuse Radiation"].values)
-            Climate_airPressure_f = interp1d(s.time_nday_f, 100*s.df["Pressure"].values)
-            Climate_airRH_f = interp1d(s.time_nday_f, s.df["Relative Humidity"].values)
+            Climate_solRadswskyb_f = interp1d(s.time_nday_f, _Rsb_Wm2)
+            Climate_solRadswskyd_f = interp1d(s.time_nday_f, _Rsd_Wm2)
+            Climate_airPressure_f = interp1d(s.time_nday_f, _p)
+            Climate_airRH_f = interp1d(s.time_nday_f, _RH)
             Climate_airU_f = interp1d(s.time_nday_f, s.df["Uavg"].values)
-            Climate_airCO2_f = interp1d(s.time_nday_f, s.df["Atmospheric CO2 Concentration (bar)"].values)
-            Climate_airO2_f = interp1d(s.time_nday_f, s.df_forcing["Atmospheric O2 Concentration (bar)"].values)
+            Climate_airCO2_f = interp1d(s.time_nday_f, _CO2)
+            Climate_airO2_f = interp1d(s.time_nday_f, _O2)
+            Climate_soilTheta_f = interp1d(s.time_nday_f, _soilTheta)
+            Climate_soilTheta_z_f = interp1d(s.time_nday_f, _soilTheta_z, axis=0)  # Interpolates across timesteps, handles all soil layers at once
+            Climate_nday_f = interp1d(s.time_nday_f, s.time_nday_f)
+        
+        elif s.dftype == '1': # RUTHERGLEN
+            moistures = s.df[[c for c in s.df.columns if c.lower().startswith('soil moisture')]]
+            _soilTheta_z = np.column_stack(moistures.values)
+            Climate_doy_f = interp_forcing(s.time_nday_f, s.time_doy_f, kind='pconst') #, fill_value=(time_doy[0],time_doy[-1]))
+            Climate_year_f = interp_forcing(s.time_nday_f, s.time_year_f, kind='pconst') #, fill_value=(time_year[0],time_year[-1]))
+            Climate_airTempCMin_f = interp1d(s.time_nday_f, s.df['Minimum temperature'].values)
+            Climate_airTempCMax_f = interp1d(s.time_nday_f, s.df['Maximum temperature'].values)
+            Climate_airTempC_f = interp1d(s.time_nday_f, (s.df['Minimum temperature'].values+s.df['Maximum temperature'].values)/2)
+            Climate_solRadswskyb_f = interp1d(s.time_nday_f, 10*(s.df['Global Radiation'].values-s.df['Diffuse Radiation'].values))
+            Climate_solRadswskyd_f = interp1d(s.time_nday_f, 10*s.df['Diffuse Radiation'].values)
+            Climate_airPressure_f = interp1d(s.time_nday_f, 100*s.df['Pressure'].values)
+            Climate_airRH_f = interp1d(s.time_nday_f, s.df['Relative Humidity'].values)
+            Climate_airU_f = interp1d(s.time_nday_f, s.df['Uavg'].values) 
+            Climate_airCO2_f = interp1d(s.time_nday_f, s.df['Atmospheric CO2 Concentration (bar)'].values)
+            Climate_airO2_f = interp1d(s.time_nday_f, s.df['Atmospheric O2 Concentration (bar)'].values)
             Climate_soilTheta_z_f = interp1d(s.time_nday_f, s._soilTheta_z, axis=0)  # Interpolates across timesteps, handles all soil layers at once
-            Climate_nday_f = interp1d(s.time_nday_f, s.time_nday_f)   ## nday represents the ordinal day-of-year plus each simulation day (e.g. a model run starting on Jan 30 and going for 2 years will have nday=30+np.arange(2*365))
-
+            Climate_nday_f = interp1d(s.time_nday_f, s.time_nday_f)  # 
 
         object.__setattr__(s, 'Climate_doy_f', Climate_doy_f)
         object.__setattr__(s, 'Climate_year_f', Climate_year_f)
@@ -224,8 +240,8 @@ class ForcingData:
         s.set_df_type()
         s.update_nlevmlsoil()
         s.generate_forcing_inputs()
-     
+        s.find_sowing_and_harvest_days()
         # s.time_descretisation()
         # s.validate_time()
         # s.generate_forcing_inputs()
-        # s.find_sowing_and_harvest_days()
+   

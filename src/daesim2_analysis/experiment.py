@@ -63,7 +63,7 @@ class Experiment:
     paths_df_forcing        : list[str] = attr.Factory(lambda: ["DAESIM_data/DAESim_forcing_data/Rutherglen_1971.csv"])
     path_parameters_file    : str = "parameters/Fast1.json"
 
-    ClimateModule           : DAESIMModulePartialLoad = DAESIMModulePartialLoad(ClimateModule)
+    ClimateModule          : DAESIMModulePartialLoad = DAESIMModulePartialLoad(ClimateModule)
     ManagementModule        : DAESIMModulePartialLoad = DAESIMModulePartialLoad(ManagementModule)
     ForcingData             : DAESIMModulePartialLoad = DAESIMModulePartialLoad(ForcingData)
     PlantGrowthPhases       : DAESIMModulePartialLoad = PlantDevXPartialLoad
@@ -77,6 +77,8 @@ class Experiment:
     SoilLayers              : DAESIMModulePartialLoad = DAESIMModulePartialLoad(SoilLayers)
     PlantModuleCalculator   : DAESIMModulePartialLoad = DAESIMModulePartialLoad(PlantModuleCalculator)
 
+    
+
     xsite                   : str = attr.field(init=False)
     title                   : str = attr.field(init=False)
     description             : str = attr.field(init=False)
@@ -84,21 +86,24 @@ class Experiment:
     dir_xsite_parameters    : str = attr.field(init=False)
     path_Mpx                : str = attr.field(init=False)
 
-    def __attrs_post_init__(self):
+    def __attrs_post_init__(s: Self):
         xsite = '-'.join(p.split('/')[-1].split('.')[0] for p in self.paths_df_forcing)
-        object.__setattr__(self, 'xsite', xsite)
+        object.__setattr__(s, 'xsite', xsite)
         title = f'DAESIM2-Plant FAST Sensitivity Analysis {xsite}'
-        object.__setattr__(self, 'title', title)
-        object.__setattr__(self, 'description', title)
-        dir_fast = join(self.dir_results, xsite)
+        object.__setattr__(s, 'title', title)
+        object.__setattr__(s, 'description', title)
+        dir_fast = join(s.dir_results, xsite)
         params_dir = join(dir_fast, 'parameters')
-        object.__setattr__(self, 'dir_xsite_FAST_results', dir_fast)
-        object.__setattr__(self, 'dir_xsite_parameters', params_dir)
-        object.__setattr__(self, 'path_Mpx', join(dir_fast, 'Mpx.npy'))
+        object.__setattr__(s, 'dir_xsite_FAST_results', dir_fast)
+        object.__setattr__(s, 'dir_xsite_parameters', params_dir)
+        object.__setattr__(s, 'path_Mpx', join(dir_fast, 'Mpx.npy'))
         makedirs(dir_fast, exist_ok=True)
         makedirs(params_dir, exist_ok=True)
-        object.__setattr__(self, 'sowing_dates', [Timestamp(d) for d in self.sowing_dates])
-        object.__setattr__(self, 'harvest_dates', [Timestamp(d) for d in self.harvest_dates])
+        object.__setattr__(s, 'sowing_dates', [Timestamp(d) for d in self.sowing_dates])
+        object.__setattr__(s, 'harvest_dates', [Timestamp(d) for d in self.harvest_dates])
+
+
+
 
     @staticmethod
     def from_cli() -> 'Experiment':
