@@ -9,10 +9,13 @@ from pandas import DataFrame
 from pandas import read_csv
 from pandas import concat
 from os.path import abspath
+from os.path import basename
 import numpy as np
+from pandas import DataFrame
 
 def load_df_forcing(paths_df_forcing: list[str])->DataFrame:
     dfs: list[DataFrame] = []
+
     for path_df_forcing in paths_df_forcing:
         df = read_csv(path_df_forcing)
         df['Date'] = to_datetime(df['Date'])
@@ -23,6 +26,7 @@ def load_df_forcing(paths_df_forcing: list[str])->DataFrame:
     df_forcing = df_forcing.reset_index(drop=True)
     df_forcing['DOY'] = df_forcing['Date'].dt.dayofyear
     df_forcing['Year'] = df_forcing['Date'].dt.year
+    df_forcing['xsite'] = basename(path_df_forcing.split('.')[0])
     return df_forcing
 
 def calculate_soilTheta_z(df: DataFrame):

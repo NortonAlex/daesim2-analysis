@@ -28,12 +28,14 @@ from daesim2_analysis.utils import *
 from daesim2_analysis.parameters import Parameters
 from typing_extensions import Union
 from daesim2_analysis.daesim_config import DAESIMConfig
+from pandas import DataFrame
 
 def is_interactive() -> bool: return hasattr(sys, 'ps1') or sys.flags.interactive
 
 
 @attr.define(frozen=True)
 class Experiment:
+    xsite                   : str = 'Milgadara_2018'
     CLatDeg                 : float = -36.05
     CLonDeg                 : float = 146.5
     tz                      : int = 10
@@ -43,9 +45,10 @@ class Experiment:
     n_processes             : int = 1
     n_samples               : int = 100
     dir_results             : str = "DAESIM_data/FAST_results"
-    paths_df_forcing        : list[str] = attr.Factory(lambda: ["DAESIM_data/DAESim_forcing_data/DAESim_forcing_Milgadara_2018.csv"])
+    df_forcing              : Union[list[str], DataFrame]  = attr.Factory(lambda: ["DAESIM_data/DAESim_forcing_data/DAESim_forcing_Milgadara_2018.csv"])
     parameters              : Union[str, Parameters] = "parameters/Fast1.json"
     daesim_config           : Union[str, DAESIMConfig] = "daesim_configs/daesim_config1.json"
+  
 
     SiteX                   : ClimateModule = attr.field(init=False)
     ForcingDataX            : ForcingData = attr.field(init=False)
@@ -65,7 +68,6 @@ class Experiment:
     input_data              : list = attr.field(init=False)
 
 
-    xsite                   : str = attr.field(init=False)
     title                   : str = attr.field(init=False)
     description             : str = attr.field(init=False)
     dir_xsite_FAST_results  : str = attr.field(init=False)
@@ -73,8 +75,7 @@ class Experiment:
     path_Mpx                : str = attr.field(init=False)
 
     def _setup_output_structure(s: Self):
-        xsite = '-'.join(p.split('/')[-1].split('.')[0] for p in s.paths_df_forcing)
-        object.__setattr__(s, 'xsite', xsite)
+        xsite = s.xsite
         title = f'DAESIM2-Plant FAST Sensitivity Analysis {xsite}'
         object.__setattr__(s, 'title', title)
         object.__setattr__(s, 'description', title)
@@ -97,7 +98,7 @@ class Experiment:
             SiteX=SiteX,
             sowing_dates=s.sowing_dates,
             harvest_dates=s.harvest_dates,
-            df=load_df_forcing(s.paths_df_forcing)
+            df=s.df_forcing
         )
         ManagementX = ManagementModule(
             cropType=s.crop_type,
@@ -163,14 +164,20 @@ class Experiment:
         
 
     def __attrs_post_init__(s: Self):
+        if not isinstance(s.df_forcing, DataFrame):
+            object.__setattr__(s, 'df_forcing', load_df_forcing(s.df_forcing))
         s._setup_output_structure()
         s._dates_to_timestamp()
-        
+                
         if isinstance(s.parameters, str):
             object.__setattr__(s, 'parameters', Parameters.__from_file__(s.parameters))
         if isinstance(s.daesim_config, str):
             object.__setattr__(s, 'daesim_config', DAESIMConfig.from_json_dict(s.daesim_config))
+
+
         s._initialise_daesim_modules(s.daesim_config)
+
+    
         
     @staticmethod
     def from_cli() -> 'Experiment':
@@ -179,24 +186,26 @@ class Experiment:
         g1.add_argument('--n_processes', type=int, required=True)
         g1.add_argument('--n_samples', type=int, required=True)
         g2 = parser.add_argument_group('Sim Arguments')
+        g2.add_argument('--xsite', type=str, required=True)
         g2.add_argument('--crop_type', type=str, required=True)
         g2.add_argument('--CLatDeg', type=float, required=True)
         g2.add_argument('--CLonDeg', type=float, required=True)
         g2.add_argument('--dir_results', type=str, required=True)
-        g2.add_argument('--paths_df_forcing', type=str, required=True)
+        g2.add_argument('--df_forcing', type=str, required=True)
         g2.add_argument('--parameters', type=str, required=True)
         g2.add_argument('--daesim_config', type=str, required=True)
         ns = parser.parse_args()
-        paths = ns.paths_df_forcing.split(',')
+        paths = ns.df_forcing.split(',')
 
         return Experiment(
+            xsite = ns.xsite,
             crop_type=ns.crop_type,
             CLatDeg=ns.CLatDeg,
             CLonDeg=ns.CLonDeg,
             n_processes=ns.n_processes,
             n_samples=ns.n_samples,
             dir_results=ns.dir_results,
-            paths_df_forcing=paths,
+            df_forcing=paths,
             parameters=ns.parameters,
             daesim_config=ns.daesim_config
         )

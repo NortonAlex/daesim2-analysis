@@ -24,14 +24,16 @@ daesim_config=daesim_configs/DAESIM1.json
 crop=Wheat
 CLatDeg=-36.05
 CLonDeg=146.5
+xsite=Milgadara
 
 python3.9 notebooks/FAST.py \
   --crop $crop \
   --n_processes $n_processes \
   --n_samples $n_samples \
   --dir_results $dir_results \
-  --paths_df_forcing "$(IFS=,; echo "${paths_df_forcing[*]}")" \
+  --df_forcing "$(IFS=,; echo "${paths_df_forcing[*]}")" \
   --parameters $parameters \
   --daesim_config $daesim_config \
   --CLatDeg $CLatDeg \
   --CLonDeg $CLonDeg \
+  --xsite $xsite
