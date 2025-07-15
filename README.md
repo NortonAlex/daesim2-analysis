@@ -496,7 +496,7 @@ param_dict = {
   "Phase Specific": [false, false, false, false, false, false, false, true, true, false, false, false, false],
   "Phase": [null, null, null, null, null, null, null, "vegetative", "grainfill", null, null, null, null]
 }
-param_obj = Parameters.__from_dict__("parameters/Fast1.json")  # or: Parameters.from_dict(your_params_dict)
+param_obj = Parameters.__from_dict__(param_dict)  # or: Parameters.from_dict(your_params_dict)
 
 # 3. Create a DAESIMConfig object
 config_obj = DAESIMConfig.from_json_dict("daesim_configs/daesim_config1.json")  # or: DAESIMConfig.from_dict(your_config_dict)
