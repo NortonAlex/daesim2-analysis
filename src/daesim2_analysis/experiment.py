@@ -26,6 +26,8 @@ from daesim2_analysis.forcing_data import ForcingData
 from daesim2_analysis.daesim_module_partial_load import DAESIMModulePartialLoad
 from daesim2_analysis.utils import *
 from daesim2_analysis.parameters import Parameters
+from typing_extensions import Union
+from daesim2_analysis.daesim_config import DAESIMConfig
 
 def is_interactive() -> bool: return hasattr(sys, 'ps1') or sys.flags.interactive
 
@@ -57,28 +59,15 @@ class Experiment:
     CLatDeg                 : float = -36.05
     CLonDeg                 : float = 146.5
     tz                      : int = 10
-    crop_type               : str = "Wheat"
+    crop_type               : str = "wheat"
     sowing_dates            : list[date] = attr.Factory(lambda: [date(2018,1,1)])
     harvest_dates           : list[date] = attr.Factory(lambda: [date(2018, 12, 31)])
     n_processes             : int = 1
     n_samples               : int = 100
     dir_results             : str = "DAESIM_data/FAST_results"
-    paths_df_forcing        : list[str] = attr.Factory(lambda: ["DAESIM_data/DAESim_forcing_data/Rutherglen_1971.csv"])
-    path_parameters_file    : str = "parameters/Fast1.json"
-
-    ClimateModule           : DAESIMModulePartialLoad = DAESIMModulePartialLoad(ClimateModule)
-    ManagementModule        : DAESIMModulePartialLoad = DAESIMModulePartialLoad(ManagementModule)
-    ForcingData             : DAESIMModulePartialLoad = DAESIMModulePartialLoad(ForcingData)
-    PlantGrowthPhases       : DAESIMModulePartialLoad = PlantDevXPartialLoad
-    CanopyLayers            : DAESIMModulePartialLoad = DAESIMModulePartialLoad(CanopyLayers, nlevmlcan=3, arg=1)
-    BoundayLayerModule      : DAESIMModulePartialLoad = DAESIMModulePartialLoad(BoundaryLayerModule)
-    LeafExchangeModule2     : DAESIMModulePartialLoad = DAESIMModulePartialLoad(LeafGasExchangeModule2)
-    CanopyRadiation         : DAESIMModulePartialLoad = DAESIMModulePartialLoad(CanopyRadiation)
-    CanopyGasExchange       : DAESIMModulePartialLoad = DAESIMModulePartialLoad(CanopyGasExchange)
-    PlantCH2O               : DAESIMModulePartialLoad = DAESIMModulePartialLoad(PlantCH2O)
-    PlantOptimalAllocation  : DAESIMModulePartialLoad = DAESIMModulePartialLoad(PlantOptimalAllocation)
-    SoilLayers              : DAESIMModulePartialLoad = DAESIMModulePartialLoad(SoilLayers)
-    PlantModuleCalculator   : DAESIMModulePartialLoad = DAESIMModulePartialLoad(PlantModuleCalculator)
+    paths_df_forcing        : list[str] = attr.Factory(lambda: ["DAESIM_data/DAESim_forcing_data/DAESim_forcing_Milgadara_2018.csv"])
+    parameters              : Union[str, Parameters] = "parameters/Fast1.json"
+    daesim_config           : Union[str, DAESIMConfig] = "daesim_configs/daesim_config1.json"
 
     SiteX                   : ClimateModule = attr.field(init=False)
     ForcingDataX            : ForcingData = attr.field(init=False)
@@ -96,7 +85,7 @@ class Experiment:
     PlantXCalc              : Callable = attr.field(init=False)
     Model                   : ODEModelSolver = attr.field(init=False)
     input_data              : list = attr.field(init=False)
-    parameters              : Parameters = attr.field(init=False)
+
 
     xsite                   : str = attr.field(init=False)
     title                   : str = attr.field(init=False)
@@ -104,8 +93,6 @@ class Experiment:
     dir_xsite_FAST_results  : str = attr.field(init=False)
     dir_xsite_parameters    : str = attr.field(init=False)
     path_Mpx                : str = attr.field(init=False)
-
-
 
     def _setup_output_structure(s: Self):
         xsite = '-'.join(p.split('/')[-1].split('.')[0] for p in s.paths_df_forcing)
@@ -125,36 +112,37 @@ class Experiment:
         object.__setattr__(s, 'sowing_dates', [Timestamp(d) for d in s.sowing_dates])
         object.__setattr__(s, 'harvest_dates', [Timestamp(d) for d in s.harvest_dates])
 
-    def _initialise_daesim_modules(s: Self):
-        SiteX = s.ClimateModule(CLatDeg=s.CLatDeg,CLonDeg=s.CLonDeg,timezone=s.tz)
-        ForcingDataX = s.ForcingData(
+    def _initialise_daesim_modules(s: Self, daesim_config: DAESIMConfig):
+        
+        SiteX = ClimateModule(CLatDeg=s.CLatDeg,CLonDeg=s.CLonDeg,timezone=s.tz)
+        ForcingDataX = ForcingData(
             SiteX=SiteX,
             sowing_dates=s.sowing_dates,
             harvest_dates=s.harvest_dates,
             df=load_df_forcing(s.paths_df_forcing)
         )
-        ManagementX = s.ManagementModule(
+        ManagementX = ManagementModule(
             cropType=s.crop_type,
             sowingDays=ForcingDataX.sowing_days,
             harvestDays=ForcingDataX.harvest_dates,
             sowingYears=ForcingDataX.sowing_years,
             harvestYears=ForcingDataX.harvest_years,
         )
-        PlantDevX = s.PlantGrowthPhases()
-        BoundaryLayerX = s.BoundayLayerModule(Site=SiteX)
-        LeafX = s.LeafExchangeModule2(Site=SiteX)
-        CanopyX = s.CanopyLayers()
-        CanopyRadX = s.CanopyRadiation(Canopy=CanopyX)
-        CanopyGasExchangeX = s.CanopyGasExchange(Leaf=LeafX, Canopy=CanopyX, CanopyRad=CanopyRadX)
-        SoilLayersX = s.SoilLayers(nlevmlsoil=ForcingDataX.nlevmlsoil)
-        PlantCH2OX = s.PlantCH2O(
+        PlantDevX = PlantGrowthPhases(daesim_config.get_module_args('plantgrowthphases.PlantGrowthPhases'))
+        BoundaryLayerX = BoundaryLayerModule(Site=SiteX)
+        LeafX = LeafGasExchangeModule2(Site=SiteX)
+        CanopyX = CanopyLayers()
+        CanopyRadX = CanopyRadiation(Canopy=CanopyX)
+        CanopyGasExchangeX = CanopyGasExchange(Leaf=LeafX, Canopy=CanopyX, CanopyRad=CanopyRadX)
+        SoilLayersX = SoilLayers(nlevmlsoil=ForcingDataX.nlevmlsoil)
+        PlantCH2OX = PlantCH2O(
             Site=SiteX,
             SoilLayers=SoilLayersX,
             CanopyGasExchange=CanopyGasExchangeX,
             BoundaryLayer=BoundaryLayerX
         )
-        PlantAllocX = s.PlantOptimalAllocation(Plant=PlantCH2OX)
-        PlantX = s.PlantModuleCalculator(
+        PlantAllocX = PlantOptimalAllocation(Plant=PlantCH2OX)
+        PlantX = PlantModuleCalculator(
             Site=SiteX,
             Management=ManagementX,
             PlantDev=PlantDevX,
@@ -199,9 +187,13 @@ class Experiment:
     def __attrs_post_init__(s: Self):
         s._setup_output_structure()
         s._dates_to_timestamp()
-        s._initialise_daesim_modules()
-        object.__setattr__(s, 'parameters', Parameters.__from_file__(s.path_parameters_file))
-
+        
+        if isinstance(s.parameters, str):
+            object.__setattr__(s, 'parameters', Parameters.__from_file__(s.parameters))
+        if isinstance(s.daesim_config, str):
+            object.__setattr__(s, 'daesim_config', DAESIMConfig.from_json_dict(s.daesim_config))
+        s._initialise_daesim_modules(s.daesim_config)
+        
     @staticmethod
     def from_cli() -> 'Experiment':
         parser = ArgumentParser()
@@ -212,7 +204,7 @@ class Experiment:
         g2.add_argument('--crop', type=str, required=True)
         g2.add_argument('--dir_results', type=str, required=True)
         g2.add_argument('--paths_df_forcing', type=str, required=True)
-        g2.add_argument('--path_parameters_file', type=str, required=True)
+        g2.add_argument('--parameters', type=str, required=True)
         ns = parser.parse_args()
         paths = ns.paths_df_forcing.split(',')
 
@@ -224,3 +216,6 @@ class Experiment:
             path_parameters_file=ns.path_parameters_file
         )
         
+
+if __name__ == '__main__':
+    exp = Experiment()

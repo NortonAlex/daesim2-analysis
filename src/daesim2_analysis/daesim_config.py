@@ -2,9 +2,10 @@ from dataclasses import dataclass, field, fields
 from pandas import DataFrame
 from typing import Any, List, Type
 from hashlib import sha256
+from json import load
 
 @dataclass(frozen=True)
-class ModuleArgs:
+class DAESIMConfig:
     """
     Container for collecting DAESIM module argument specifications.
     Each field should be a list of the same length, describing one argument across modules.
@@ -32,7 +33,7 @@ class ModuleArgs:
         # Validate equal lengths
         lengths = {col: len(vals) for col, vals in self.df.items()}
         if len(set(lengths.values())) != 1:
-            raise ValueError(f"Inconsistent lengths in ModuleArgs fields: {lengths}")
+            raise ValueError(f"Inconsistent lengths in DAESIMConfig fields: {lengths}")
 
     def __iter__(self):
         """Yield tuples of (field_name, label, values) for init fields."""
@@ -69,10 +70,17 @@ class ModuleArgs:
     def __str__(self) -> str:
         return str(self.df)
 
-    @classmethod
-    def from_dict(cls, config: dict, required: bool = True) -> "ModuleArgs":
+    def get_module_args(self, module_path: str) -> DataFrame:
         """
-        Construct ModuleArgs from a nested config dict of the form:
+        Return a DataFrame of parameters for the given module path.
+        """
+        # Filter rows where the Module Path matches exactly
+        return self.df[self.df['Module Path'] == module_path].copy()
+
+    @classmethod
+    def from_dict(cls, config: dict, required: bool = True) -> "DAESIMConfig":
+        """
+        Construct DAESIMConfig from a nested config dict of the form:
           { "module.path.ClassName": { arg1: val1, arg2: val2, ... }, ... }
         """
         paths = []
@@ -102,10 +110,15 @@ class ModuleArgs:
             description=descriptions,
         )
 
+    @classmethod
+    def from_json_dict(cls, path: str):
+        return cls.from_dict(load(open(path)))
+
+
 # Example instantiation
 if __name__ == "__main__":
     # Define multiple args for ClimateModule and ManagementModule
-    args = ModuleArgs(
+    args = DAESIMConfig(
         module_path=[
             "daesim.climate.ClimateModule",
             "daesim.climate.ClimateModule",
@@ -132,7 +145,10 @@ if __name__ == "__main__":
             "cropType": "wheat"
         }
     }
-    args2 = ModuleArgs.from_dict(config)
+    args2 = DAESIMConfig.from_dict(config)
 
     # Inspect the DataFrame
     print(args2.df)
+
+    args3 = DAESIMConfig.from_json_dict('daesim_configs/daesim_config1.json')
+    print(args3)
