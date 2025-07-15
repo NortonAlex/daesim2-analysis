@@ -14,6 +14,8 @@ import numpy as np
 from pandas import DataFrame
 
 def load_df_forcing(paths_df_forcing: list[str])->DataFrame:
+    if type(paths_df_forcing) == str:
+        paths_df_forcing = [paths_df_forcing]
     dfs: list[DataFrame] = []
 
     for path_df_forcing in paths_df_forcing:
