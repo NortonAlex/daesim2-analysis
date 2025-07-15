@@ -75,7 +75,10 @@ class DAESIMConfig:
         Return a DataFrame of parameters for the given module path.
         """
         # Filter rows where the Module Path matches exactly
-        return self.df[self.df['Module Path'] == module_path].copy()
+        df = self.df[self.df['Module Path'] == module_path].copy()
+        arguments = df['Argument']
+        values = df['Default']
+        return dict(zip(arguments, values))
 
     @classmethod
     def from_dict(cls, config: dict, required: bool = True) -> "DAESIMConfig":

@@ -31,35 +31,13 @@ from daesim2_analysis.daesim_config import DAESIMConfig
 
 def is_interactive() -> bool: return hasattr(sys, 'ps1') or sys.flags.interactive
 
-PlantDevXPartialLoad = DAESIMModulePartialLoad(
-    PlantGrowthPhases,
-    phases=["germination","vegetative","spike","anthesis","grainfill","maturity"],
-    gdd_requirements=[50,800,280,150,300,300],
-    vd_requirements=[0,30,0,0,0,0],
-    allocation_coeffs=[
-        [0.2,0.1,0.7,0.0,0.0],
-        [0.5,0.1,0.4,0.0,0.0],
-        [0.3,0.4,0.3,0.0,0.0],
-        [0.3,0.4,0.3,0.0,0.0],
-        [0.1,0.1,0.1,0.7,0.0],
-        [0.1,0.1,0.1,0.7,0.0]
-    ],
-    turnover_rates=[
-        [0.001,0.001,0.001,0.0,0.0],
-        [0.01,0.002,0.008,0.0,0.0],
-        [0.01,0.002,0.008,0.0,0.0],
-        [0.01,0.002,0.008,0.0,0.0],
-        [0.033,0.016,0.033,0.0002,0.0],
-        [0.10,0.033,0.10,0.0002,0.0]
-    ]
-)
 
 @attr.define(frozen=True)
 class Experiment:
     CLatDeg                 : float = -36.05
     CLonDeg                 : float = 146.5
     tz                      : int = 10
-    crop_type               : str = "wheat"
+    crop_type               : str = "Wheat"
     sowing_dates            : list[date] = attr.Factory(lambda: [date(2018,1,1)])
     harvest_dates           : list[date] = attr.Factory(lambda: [date(2018, 12, 31)])
     n_processes             : int = 1
@@ -128,7 +106,8 @@ class Experiment:
             sowingYears=ForcingDataX.sowing_years,
             harvestYears=ForcingDataX.harvest_years,
         )
-        PlantDevX = PlantGrowthPhases(daesim_config.get_module_args('plantgrowthphases.PlantGrowthPhases'))
+        print(daesim_config.get_module_args('plantgrowthphases.PlantGrowthPhases'))
+        PlantDevX = PlantGrowthPhases(**daesim_config.get_module_args('plantgrowthphases.PlantGrowthPhases'))
         BoundaryLayerX = BoundaryLayerModule(Site=SiteX)
         LeafX = LeafGasExchangeModule2(Site=SiteX)
         CanopyX = CanopyLayers()
@@ -156,7 +135,6 @@ class Experiment:
             time_start=ForcingDataX.time_axis[0],
             log_diagnostics=True
         )
-
         input_data = [
             ODEModelSolver,
             ForcingDataX.time_axis,
@@ -200,20 +178,27 @@ class Experiment:
         g1 = parser.add_argument_group('Optimisation Arguments')
         g1.add_argument('--n_processes', type=int, required=True)
         g1.add_argument('--n_samples', type=int, required=True)
-        g2 = parser.add_argument_group('File Arguments')
-        g2.add_argument('--crop', type=str, required=True)
+        g2 = parser.add_argument_group('Sim Arguments')
+        g2.add_argument('--crop_type', type=str, required=True)
+        g2.add_argument('--CLatDeg', type=float, required=True)
+        g2.add_argument('--CLonDeg', type=float, required=True)
         g2.add_argument('--dir_results', type=str, required=True)
         g2.add_argument('--paths_df_forcing', type=str, required=True)
         g2.add_argument('--parameters', type=str, required=True)
+        g2.add_argument('--daesim_config', type=str, required=True)
         ns = parser.parse_args()
         paths = ns.paths_df_forcing.split(',')
 
         return Experiment(
+            crop_type=ns.crop_type,
+            CLatDeg=ns.CLatDeg,
+            CLonDeg=ns.CLonDeg,
             n_processes=ns.n_processes,
             n_samples=ns.n_samples,
             dir_results=ns.dir_results,
             paths_df_forcing=paths,
-            path_parameters_file=ns.path_parameters_file
+            parameters=ns.parameters,
+            daesim_config=ns.daesim_config
         )
         
 
