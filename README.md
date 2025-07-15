@@ -389,13 +389,20 @@ python run_FAST.py \
   --dir_results ./results \
   --paths_df_forcing data/forcings1.csv,data/forcings2.csv \
   --parameters parameters/Fast1.json \
-  --daesim_config daesim_configs/daesim_config1.json
+  --daesim_config daesim_configs/DAESIM1.json
 
-------------------------------------------------------------------
+----------------------------------------------------------------------------------
 #DAESIMConfig.json
 {
     "plantgrowthphases.PlantGrowthPhases": {
-        "phases": ["germination","vegetative","spike","anthesis","grainfill","maturity"],
+        "phases": [
+					"germination",
+					"vegetative",
+					"spike",
+					"anthesis",
+					"grainfill",
+					"maturity"
+				],
         "gdd_requirements": [50,800,280,150,300,300],
         "vd_requirements": [0,30,0,0,0,0],
         "allocation_coeffs": [
@@ -478,7 +485,18 @@ from daesim2_analysis.daesim_config import DAESIMConfig
 df_force = pd.read_csv("data/forcings1.csv", parse_dates=["Date"])
 
 # 2. Create a Parameters object (e.g. from JSON or dict)
-param_obj = Parameters.__from_file__("parameters/Fast1.json")  # or: Parameters.from_dict(your_params_dict)
+param_dict = {
+  "Module Path": ["PlantCH2O.CanopyGasExchange.Leaf", "PlantCH2O.CanopyGasExchange.Leaf", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantDev", "PlantDev", "", "", "", ""],
+  "Module": ["Leaf", "Leaf", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantDev", "PlantDev", "", "", "", ""],
+  "Name": ["Vcmax_opt", "g1", "SLA", "maxLAI", "ksr_coeff", "Psi_f", "sf", "gdd_requirements", "gdd_requirements", "GY_FE", "GY_SDW_50", "CI", "d_r_max"],
+  "Unit": ["mol CO2 m-2 s-1", "kPa^0.5", "m2 g d.wt-1", "m2 m-2", "g d.wt-1 m-1", "MPa", "MPa-1", "deg C d", "deg C d", "thsnd grains g d.wt spike-1", "g d.wt m-2", "-", "m"],
+  "Initial Value": [60e-6, 3, 0.03, 6, 1000, -3.5, 3.5, 900, 650, 0.1, 100, 0.75, 0.5],
+  "Min": [30e-6, 1, 0.015, 5, 300, -8.0, 1.5, 600, 350, 0.08, 80, 0.5, 0.15],
+  "Max": [120e-6, 6, 0.035, 7, 5000, -1.0, 7.0, 1800, 700, 0.21, 150, 1.0, 0.66],
+  "Phase Specific": [false, false, false, false, false, false, false, true, true, false, false, false, false],
+  "Phase": [null, null, null, null, null, null, null, "vegetative", "grainfill", null, null, null, null]
+}
+param_obj = Parameters.__from_dict__("parameters/Fast1.json")  # or: Parameters.from_dict(your_params_dict)
 
 # 3. Create a DAESIMConfig object
 config_obj = DAESIMConfig.from_json_dict("daesim_configs/daesim_config1.json")  # or: DAESIMConfig.from_dict(your_config_dict)
@@ -492,12 +510,10 @@ exp_programmatic = Experiment(
 	df_forcing=df_force,
 	parameters=param_obj,
 	daesim_config=config_obj,
-		
 )
 
 # Verify
 print(exp_programmatic.ForcingDataX.df.head())
 print(exp_programmatic.parameters.df.head())
 print(exp_programmatic.daesim_config.df.head())
-
 ```
