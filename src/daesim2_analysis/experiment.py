@@ -40,8 +40,8 @@ class Experiment:
     CLonDeg                 : float = 146.5
     tz                      : int = 10
     crop_type               : str = "Wheat"
-    sowing_dates            : list[date] = attr.Factory(lambda: [date(2018,1,1)])
-    harvest_dates           : list[date] = attr.Factory(lambda: [date(2018, 12, 31)])
+    sowing_dates            : list[date] = attr.Factory(lambda: [Timestamp(year=2018,month=1,day=1)])
+    harvest_dates           : list[date] = attr.Factory(lambda: [Timestamp(year=2018,month=12,day=31)])
     n_processes             : int = 1
     n_samples               : int = 100
     dir_results             : str = "DAESIM_data/FAST_results"
@@ -103,7 +103,7 @@ class Experiment:
         ManagementX = ManagementModule(
             cropType=s.crop_type,
             sowingDays=ForcingDataX.sowing_days,
-            harvestDays=ForcingDataX.harvest_dates,
+            harvestDays=ForcingDataX.harvest_days,
             sowingYears=ForcingDataX.sowing_years,
             harvestYears=ForcingDataX.harvest_years,
         )
@@ -121,7 +121,7 @@ class Experiment:
             CanopyGasExchange=CanopyGasExchangeX,
             BoundaryLayer=BoundaryLayerX
         )
-        PlantAllocX = PlantOptimalAllocation(Plant=PlantCH2OX)
+        PlantAllocX = PlantOptimalAllocation(PlantCH2O=PlantCH2OX)
         PlantX = PlantModuleCalculator(
             Site=SiteX,
             Management=ManagementX,

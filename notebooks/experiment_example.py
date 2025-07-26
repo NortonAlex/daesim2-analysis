@@ -1,15 +1,19 @@
+# %%
 import pandas as pd
 from daesim2_analysis.experiment import Experiment
 from daesim2_analysis.parameters import Parameters
 from daesim2_analysis.daesim_config import DAESIMConfig
 from daesim2_analysis.utils import load_df_forcing
 
+# %%
 # 1. Load forcing data into a DataFrame
 # df_force = pd.read_csv("data/forcings1.csv", parse_dates=["Date"])
-df_forcing = load_df_forcing("DAESIM_data/DAESim_forcing_data/DAESim_forcing_Milgadara_2018.csv")
+df_forcing = load_df_forcing("../DAESIM_data/DAESim_forcing_data/DAESim_forcing_Milgadara_2018.csv")
 
+# %% [markdown]
 # 2. Create a Parameters object (e.g. from JSON or dict)
 
+# %%
 parameters = Parameters(
         paths           = ["PlantCH2O.CanopyGasExchange.Leaf", "PlantCH2O.CanopyGasExchange.Leaf", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantDev", "PlantDev", "", "", "", ""],
         modules         = ["Leaf", "Leaf", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantDev", "PlantDev", "", "", "", ""],
@@ -22,8 +26,10 @@ parameters = Parameters(
         phase           = [None, None, None, None, None, None, None, "vegetative", "grainfill", None, None, None, None]
 )
 
-daesim_config = DAESIMConfig.from_json_dict("daesim_configs/DAESIM1.json")  # or: DAESIMConfig.from_dict(your_config_dict)
+# %%
+daesim_config = DAESIMConfig.from_json_dict("../daesim_configs/DAESIM1.json")  # or: DAESIMConfig.from_dict(your_config_dict)
 
+# %%
 # # 4. Instantiate Experiment with DataFrame, Parameters, and DAESIMConfig
 exp_programmatic = Experiment(
 	xsite="TestSite",
@@ -35,6 +41,7 @@ exp_programmatic = Experiment(
 	daesim_config=daesim_config,
 )
 
+# %%
 # # Verify
 print(exp_programmatic.ForcingDataX.df.head())
 print(exp_programmatic.parameters.df.head())
