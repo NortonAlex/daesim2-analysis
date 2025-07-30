@@ -106,28 +106,30 @@ class Experiment:
             harvestDays=ForcingDataX.harvest_days,
             sowingYears=ForcingDataX.sowing_years,
             harvestYears=ForcingDataX.harvest_years,
+            **daesim_config.get_module_args('management.ManagementModule')
         )
-        print(daesim_config.get_module_args('plantgrowthphases.PlantGrowthPhases'))
         PlantDevX = PlantGrowthPhases(**daesim_config.get_module_args('plantgrowthphases.PlantGrowthPhases'))
-        BoundaryLayerX = BoundaryLayerModule(Site=SiteX)
-        LeafX = LeafGasExchangeModule2(Site=SiteX)
-        CanopyX = CanopyLayers()
-        CanopyRadX = CanopyRadiation(Canopy=CanopyX)
-        CanopyGasExchangeX = CanopyGasExchange(Leaf=LeafX, Canopy=CanopyX, CanopyRad=CanopyRadX)
-        SoilLayersX = SoilLayers(nlevmlsoil=ForcingDataX.nlevmlsoil)
+        BoundaryLayerX = BoundaryLayerModule(Site=SiteX,**daesim_config.get_module_args('boundarylayer.BoundaryLayerModule'))
+        LeafX = LeafGasExchangeModule2(Site=SiteX,**daesim_config.get_module_args('leafgasexchange2.LeafGasExchangeModule2'))
+        CanopyX = CanopyLayers(**daesim_config.get_module_args('canopylayers.CanopyLayers'))
+        CanopyRadX = CanopyRadiation(Canopy=CanopyX,**daesim_config.get_module_args('canopyradiation.CanopyRadiation'))
+        CanopyGasExchangeX = CanopyGasExchange(Leaf=LeafX, Canopy=CanopyX, CanopyRad=CanopyRadX,**daesim_config.get_module_args('canopygasexchange.CanopyGasExchange'))
+        SoilLayersX = SoilLayers(nlevmlsoil=ForcingDataX.nlevmlsoil,**daesim_config.get_module_args('soillayers.SoilLayers'))
         PlantCH2OX = PlantCH2O(
             Site=SiteX,
             SoilLayers=SoilLayersX,
             CanopyGasExchange=CanopyGasExchangeX,
-            BoundaryLayer=BoundaryLayerX
+            BoundaryLayer=BoundaryLayerX,
+            **daesim_config.get_module_args('plantcarbonwater.PlantCH2O')
         )
-        PlantAllocX = PlantOptimalAllocation(PlantCH2O=PlantCH2OX)
+        PlantAllocX = PlantOptimalAllocation(PlantCH2O=PlantCH2OX,**daesim_config.get_module_args('plantallocoptimal.PlantOptimalAllocation'))
         PlantX = PlantModuleCalculator(
             Site=SiteX,
             Management=ManagementX,
             PlantDev=PlantDevX,
             PlantCH2O = PlantCH2OX,
-            PlantAlloc=PlantAllocX
+            PlantAlloc=PlantAllocX,
+            **daesim_config.get_module_args('plant_1000.PlantModuleCalculator')
         )
         PlantXCalc = PlantX.calculate
         Model = ODEModelSolver(
