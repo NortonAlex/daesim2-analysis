@@ -7,6 +7,7 @@ from dataclasses import field
 from daesim.climate import *
 from dataclasses import field
 import numpy as np
+import re
 
 @dataclass(frozen=True)
 class ForcingData:
@@ -36,7 +37,7 @@ class ForcingData:
                                     ]
                                     )
 
-    df_type                         : str = field(init=False)
+    df_type                         : str = '3'  #field(init=False)
     diffuse_fraction                : float = 0.2
     uniform_moisture_across_layers  : bool = False
     start_doy_f                     : int = field(init=False)
@@ -71,11 +72,14 @@ class ForcingData:
     zero_crossing_indices           : list[int] = field(default_factory=lambda: [4, 5, 6])
 
     def set_df_type(s: Self):
-        if all(col in s.df.columns for col in s.df_type_1_cols + s.df_common_cols):
-            object.__setattr__(s, 'df_type', '1')   
-        elif all(col in s.df.columns for col in s.df_type_2_cols + s.df_common_cols):
-            object.__setattr__(s, 'df_type', '2')
-        
+        if s.df_type == '0':
+            # Use column names to determine df_type
+            if all(col in s.df.columns for col in s.df_type_1_cols + s.df_common_cols):
+                object.__setattr__(s, 'df_type', '1')
+            elif all(col in s.df.columns for col in s.df_type_2_cols + s.df_common_cols):
+                object.__setattr__(s, 'df_type', '2')
+        elif s.df_type == '3':
+            pass
         else:
             raise ValueError('The dataframe is missing columns required to build the Climate Variables \n\
                                 Either Build Code to support the new config of columns provided or \n\
@@ -163,24 +167,36 @@ class ForcingData:
             Climate_soilTheta_f = interp1d(s.time_nday_f, _soilTheta)
             Climate_soilTheta_z_f = interp1d(s.time_nday_f, _soilTheta_z, axis=0)  # Interpolates across timesteps, handles all soil layers at once
             Climate_nday_f = interp1d(s.time_nday_f, s.time_nday_f)
-        
-        elif s.dftype == '1': # RUTHERGLEN
-            moistures = s.df[[c for c in s.df.columns if c.lower().startswith('soil moisture')]]
-            _soilTheta_z = np.column_stack(moistures.values)
-            Climate_doy_f = interp_forcing(s.time_nday_f, s.time_doy_f, kind='pconst') #, fill_value=(time_doy[0],time_doy[-1]))
-            Climate_year_f = interp_forcing(s.time_nday_f, s.time_year_f, kind='pconst') #, fill_value=(time_year[0],time_year[-1]))
-            Climate_airTempCMin_f = interp1d(s.time_nday_f, s.df['Minimum temperature'].values)
-            Climate_airTempCMax_f = interp1d(s.time_nday_f, s.df['Maximum temperature'].values)
-            Climate_airTempC_f = interp1d(s.time_nday_f, (s.df['Minimum temperature'].values+s.df['Maximum temperature'].values)/2)
-            Climate_solRadswskyb_f = interp1d(s.time_nday_f, 10*(s.df['Global Radiation'].values-s.df['Diffuse Radiation'].values))
-            Climate_solRadswskyd_f = interp1d(s.time_nday_f, 10*s.df['Diffuse Radiation'].values)
-            Climate_airPressure_f = interp1d(s.time_nday_f, 100*s.df['Pressure'].values)
-            Climate_airRH_f = interp1d(s.time_nday_f, s.df['Relative Humidity'].values)
-            Climate_airU_f = interp1d(s.time_nday_f, s.df['Uavg'].values) 
-            Climate_airCO2_f = interp1d(s.time_nday_f, s.df['Atmospheric CO2 Concentration (bar)'].values)
-            Climate_airO2_f = interp1d(s.time_nday_f, s.df['Atmospheric O2 Concentration (bar)'].values)
-            Climate_soilTheta_z_f = interp1d(s.time_nday_f, s._soilTheta_z, axis=0)  # Interpolates across timesteps, handles all soil layers at once
-            Climate_nday_f = interp1d(s.time_nday_f, s.time_nday_f)  # 
+
+        if s.df_type == '3': # ASSUMES CONVENTIONAL COLUMN NAMES ARE AVAILABLE
+            ## Read soil moisture columns and sort into ascending order (uppermost layer first)
+            soil_moisture_cols = [col for col in s.df.columns if col.startswith("Soil moisture interp")]
+            def extract_depth(colname):
+                match = re.search(r"Soil moisture (\d+)-(\d+)", colname)
+                if match:
+                    return int(match.group(1))  # use the start depth for sorting
+                else:
+                    return float('inf')  # fallback if pattern doesn't match
+
+            soil_moisture_cols_sorted = sorted(soil_moisture_cols, key=extract_depth)
+            _soilTheta_z = s.df[soil_moisture_cols_sorted].to_numpy()
+            _soilTheta = np.nanmean(_soilTheta_z, axis=1)
+
+            Climate_doy_f = interp_forcing(s.time_nday_f, s.time_doy_f, kind="pconst", fill_value=(s.time_doy_f[0],s.time_doy_f[-1]))
+            Climate_year_f = interp_forcing(s.time_nday_f, s.time_year_f, kind="pconst", fill_value=(s.time_year_f[0],s.time_year_f[-1]))
+            Climate_airTempCMin_f = interp1d(s.time_nday_f, s.df["Minimum temperature"].values)
+            Climate_airTempCMax_f = interp1d(s.time_nday_f, s.df["Maximum temperature"].values)
+            Climate_airTempC_f = interp1d(s.time_nday_f, (s.df["Minimum temperature"].values+s.df["Maximum temperature"].values)/2)
+            Climate_solRadswskyb_f = interp1d(s.time_nday_f, s.df["Downwelling shortwave beam radiation"].values)
+            Climate_solRadswskyd_f = interp1d(s.time_nday_f, s.df["Downwelling shortwave diffuse radiation"].values)
+            Climate_airPressure_f = interp1d(s.time_nday_f, s.df["Atmospheric pressure"].values)
+            Climate_airRH_f = interp1d(s.time_nday_f,  s.df["Relative humidity"].values)
+            Climate_airU_f = interp1d(s.time_nday_f, s.df["Wind speed"].values)
+            Climate_airCO2_f = interp1d(s.time_nday_f, s.df["Atmospheric carbon dioxide concentration"].values)
+            Climate_airO2_f = interp1d(s.time_nday_f, s.df["Atmospheric oxygen concentration"].values)
+            Climate_soilTheta_f = interp1d(s.time_nday_f, _soilTheta)
+            Climate_soilTheta_z_f = interp1d(s.time_nday_f, _soilTheta_z, axis=0)  # Interpolates across timesteps, handles all soil layers at once
+            Climate_nday_f = interp1d(s.time_nday_f, s.time_nday_f)
 
         object.__setattr__(s, 'Climate_doy_f', Climate_doy_f)
         object.__setattr__(s, 'Climate_year_f', Climate_year_f)

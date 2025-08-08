@@ -48,6 +48,7 @@ class Experiment:
     df_forcing              : Union[list[str], DataFrame]  = attr.Factory(lambda: ["DAESIM_data/DAESim_forcing_data/DAESim_forcing_Milgadara_2018.csv"])
     parameters              : Union[str, Parameters] = "parameters/Fast1.json"
     daesim_config           : Union[str, DAESIMConfig] = "daesim_configs/daesim_config1.json"
+    df_forcing_type         : str = '0'
   
 
     SiteX                   : ClimateModule = attr.field(init=False)
@@ -98,7 +99,8 @@ class Experiment:
             SiteX=SiteX,
             sowing_dates=s.sowing_dates,
             harvest_dates=s.harvest_dates,
-            df=s.df_forcing
+            df=s.df_forcing,
+            df_type=s.df_forcing_type
         )
         ManagementX = ManagementModule(
             cropType=s.crop_type,
