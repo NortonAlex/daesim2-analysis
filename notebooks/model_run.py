@@ -26,6 +26,7 @@ from os import makedirs
 # from tqdm import tqdm
 from time import time
 from functools import partial
+from pandas import Timestamp
 
 from daesim2_analysis.experiment import Experiment
 from daesim2_analysis.experiment import is_interactive
@@ -35,12 +36,22 @@ from daesim2_analysis.forcing_data import ForcingData
 from daesim2_analysis.run import *
 
 # %%
-# experiment = Experiment.from_cli() if not is_interactive() else Experiment()
+# # experiment = Experiment.from_cli() if not is_interactive() else Experiment()
+# experiment = Experiment(
+#     df_forcing="../DAESIM_data/DAESim_forcing_data/DAESim_forcing_Milgadara_2018.csv",
+#     parameters="../parameters/Fast1.json",
+#     daesim_config="../daesim_configs/DAESIM1.json",
+#     dir_results="../results/",
+# )
+
 experiment = Experiment(
-    df_forcing="../DAESIM_data/DAESim_forcing_data/DAESim_forcing_Milgadara_2018.csv",
+    df_forcing="../DAESIM_data/DAESim_forcing_data/DAESim_forcing_Harden_2008_SC4_v1.csv",
     parameters="../parameters/Fast1.json",
     daesim_config="../daesim_configs/DAESIM1.json",
     dir_results="../results/",
+    df_forcing_type='3',
+    sowing_dates=[Timestamp(year=2008,month=5,day=14)],
+    harvest_dates=[Timestamp(year=2008,month=11,day=17)],
 )
 
 # %%
@@ -130,16 +141,18 @@ axes[3].annotate("Soil moisture", (0.02,0.93), xycoords='axes fraction', vertica
 # axes[3].set_ylim([20,50])
 axes[3].set_xlabel("Time (day of year)")
 
-ax2 = axes[3].twinx()
-# i0, i1 = time_axis[0]-1, time_axis[-1]
-ax2.bar(model_output[d_fd_mapping['Climate_doy_f']], experiment.df_forcing["Precipitation"].values, color="0.4")
-ax2.set_ylabel("Daily Precipitation\n(mm)")
-axes[3].annotate("Precipitation", (0.98,0.93), xycoords='axes fraction', verticalalignment='top', horizontalalignment='right', fontsize=12)
+if "Precipitation" in experiment.df_forcing.columns:
+    ax2 = axes[3].twinx()
+    i0, i1 = experiment.ForcingDataX.time_axis[0]-1, experiment.ForcingDataX.time_axis[-1]
+    ax2.bar(model_output[d_fd_mapping['Climate_doy_f']], experiment.df_forcing["Precipitation"].values[i0:i1], color="0.4")
+    ax2.set_ylabel("Daily Precipitation\n(mm)")
+    axes[3].annotate("Precipitation", (0.98,0.93), xycoords='axes fraction', verticalalignment='top', horizontalalignment='right', fontsize=12)
 
 axes[0].set_xlim([experiment.PlantX.Management.sowingDays[0],model_output[d_fd_mapping['Climate_doy_f']][-1]])
 
 plt.tight_layout()
-# plt.savefig("/Users/alexandernorton/ANU/Projects/DAESim/DAESIM/results/DAESIM2_%s_climate.png" % site_filename,dpi=300,bbox_inches='tight')
+
+# %%
 
 # %%
 
