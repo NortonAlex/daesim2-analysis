@@ -52,6 +52,7 @@ experiment = Experiment(
     df_forcing_type='3',
     sowing_dates=[Timestamp(year=2008,month=5,day=14)],
     harvest_dates=[Timestamp(year=2008,month=11,day=17)],
+    xsite="Harden_2008",
 )
 
 # %%
@@ -153,7 +154,49 @@ axes[0].set_xlim([experiment.PlantX.Management.sowingDays[0],model_output[d_fd_m
 plt.tight_layout()
 
 # %%
+fig, axes = plt.subplots(5,1,figsize=(8,10),sharex=True)
 
-# %%
+axes[0].plot(model_output['t'], model_output["LAI"])
+axes[0].set_ylabel("LAI\n"+r"($\rm m^2 \; m^{-2}$)")
+axes[0].tick_params(axis='x', labelrotation=45)
+axes[0].annotate("Leaf area index", (0.01,0.93), xycoords='axes fraction', verticalalignment='top', horizontalalignment='left', fontsize=12)
+axes[0].set_ylim([0,6.5])
+
+axes[1].plot(model_output["t"], model_output["GPP"])
+axes[1].set_ylabel("GPP\n"+r"($\rm g C \; m^{-2} \; d^{-1}$)")
+axes[1].tick_params(axis='x', labelrotation=45)
+axes[1].annotate("Photosynthesis", (0.01,0.93), xycoords='axes fraction', verticalalignment='top', horizontalalignment='left', fontsize=12)
+axes[1].set_ylim([0,30])
+
+axes[2].plot(model_output["t"], model_output["E_mmd"])
+axes[2].set_ylabel(r"$\rm E$"+"\n"+r"($\rm mm \; d^{-1}$)")
+axes[2].tick_params(axis='x', labelrotation=45)
+axes[2].annotate("Transpiration Rate", (0.01,0.93), xycoords='axes fraction', verticalalignment='top', horizontalalignment='left', fontsize=12)
+axes[2].set_ylim([0,6])
+
+axes[3].plot(model_output["t"], model_output["Bio_time"])
+axes[3].set_ylabel("Thermal Time\n"+r"($\rm ^{\circ}$C d)")
+axes[3].annotate("Growing Degree Days", (0.01,0.93), xycoords='axes fraction', verticalalignment='top', horizontalalignment='left', fontsize=12)
+
+alp = 0.6
+axes[4].plot(model_output["t"], model_output["Cleaf"]+model_output["Croot"]+model_output["Cstem"]+model_output["Cseed"],c='k',label="Plant", alpha=alp)
+axes[4].plot(model_output["t"], model_output["Cleaf"],label="Leaf", alpha=alp)
+axes[4].plot(model_output["t"], model_output["Cstem"],label="Stem", alpha=alp)
+axes[4].plot(model_output["t"], model_output["Croot"],label="Root", alpha=alp)
+axes[4].plot(model_output["t"], model_output["Cseed"],label="Seed", alpha=alp)
+axes[4].set_ylabel("Carbon Pool Size\n"+r"(g C $\rm m^{-2}$)")
+axes[4].set_xlabel("Time (day of year)")
+axes[4].legend(loc=3,fontsize=9,handlelength=0.8)
+
+# Time indexing for model output data, to determine outputs at specific times in the growing season
+itax_sowing, itax_mature, itax_harvest, itax_phase_transitions = experiment.PlantX.Site.time_index_growing_season(experiment.ForcingDataX.time_index, model_output['idevphase_numeric'], experiment.PlantX.Management, experiment.PlantX.PlantDev)
+harvest_index_maturity = model_output["Cseed"][itax_harvest] / (model_output["Cleaf"][itax_mature]+model_output["Croot"][itax_mature]+model_output["Cstem"][itax_mature])
+yield_from_seed_Cpool = model_output["Cseed"][itax_harvest]/100 * (1/experiment.PlantX.PlantCH2O.f_C)   ## convert gC m-2 to t dry biomass ha-1
+axes[4].annotate("Yield = %1.2f t/ha" % (yield_from_seed_Cpool), (0.01,0.93), xycoords='axes fraction', verticalalignment='top', horizontalalignment='left', fontsize=12)
+axes[4].annotate("Harvest index = %1.2f" % (harvest_index_maturity), (0.01,0.81), xycoords='axes fraction', verticalalignment='top', horizontalalignment='left', fontsize=12)
+
+axes[0].set_xlim([experiment.PlantX.Management.sowingDays[0],model_output[d_fd_mapping['Climate_doy_f']][-1]])
+
+plt.tight_layout()
 
 # %%
