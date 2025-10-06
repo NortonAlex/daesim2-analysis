@@ -443,18 +443,32 @@ print("Minimum Objective Function Value:", result.fun)
 # ### 7. Display optimised parameters and model-observed comparison
 
 # %%
+
+# %%
+np.around(np.array(result.x)).astype(int)
+
+# %%
 optimised_parameters = np.around(np.array(result.x)).astype(int)
 
 for i, p in enumerate(parameters.df["Name"].values):
     print(i,p,' initial =',parameters.df["Initial Value"].values[i],', optimised =',optimised_parameters[i])
 
 
+# %%
+# Add new column to parameters class for optimised parameters
+df = parameters.to_dataframe().copy()
+df['Optimised Value'] = optimised_parameters
+object.__setattr__(parameters, 'df', df)
+
+# Write to new JSON file
+parameters.to_file("../parameters/PlantDevCalibrated.json")
+
 # %% [markdown]
 # #### - Run the model with the optimised parameters
 
 # %%
-PlantX.Management.sowingDays = [157]
-PlantX.Management.harvestDays = [307]
+PlantX.Management.sowingDays = parameters.df.loc[parameters.df['Name'] == 'sowingDays']['Optimised Value'].values
+PlantX.Management.harvestDays = parameters.df.loc[parameters.df['Name'] == 'harvestDays']['Optimised Value'].values
 
 # %%
 input_data = [ODEModelSolver, ForcingDataX.time_axis, ForcingDataX.inputs, ForcingDataX.reset_days, ForcingDataX.zero_crossing_indices, ForcingDataX.time_nday_f, ForcingDataX.time_doy_f, ForcingDataX.time_year_f]
