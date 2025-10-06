@@ -143,10 +143,12 @@ class Experiment:
         input_data = [
             ODEModelSolver,
             ForcingDataX.time_axis,
-            ForcingDataX.time_index,
             ForcingDataX.inputs,
             ForcingDataX.reset_days,
-            ForcingDataX.zero_crossing_indices
+            ForcingDataX.zero_crossing_indices,
+            ForcingDataX.time_nday_f,
+            ForcingDataX.time_doy_f,
+            ForcingDataX.time_year_f
         ]
 
         object.__setattr__(s, 'SiteX', SiteX)

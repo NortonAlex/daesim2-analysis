@@ -10,7 +10,7 @@ import subprocess
 import numpy as np
 import pandas as pd
 
-def run_model_and_get_outputs(Plant, ODEModelSolver, time_axis, time_index, forcing_inputs, reset_days, zero_crossing_indices):
+def run_model_and_get_outputs(Plant, ODEModelSolver, time_axis, forcing_inputs, reset_days, zero_crossing_indices):
     ## Define the callable calculator that defines the right-hand-side ODE function
     PlantCalc = Plant.calculate
     
@@ -154,7 +154,7 @@ def update_and_run_model(param_values, model_instance, input_data, param_info, s
         Instance of the model class that includes methods for running simulations.
     input_data : tuple
         A tuple containing input data required for the model run, structured as:
-        (ODEModelSolver, time_axis, time_index, forcing_inputs, reset_days, zero_crossing_indices).
+        (ODEModelSolver, time_axis, forcing_inputs, reset_days, zero_crossing_indices, time_nday_f, time_doy_f, time_year_f).
     param_info : pd.DataFrame
         DataFrame with parameter metadata, including:
         - "Name": Parameter name as used in the model.
@@ -172,6 +172,10 @@ def update_and_run_model(param_values, model_instance, input_data, param_info, s
     array_like
         Model outputs after running the simulation.
     """
+
+    # Unpack input data to pass to model run function
+    ODEModelSolver, time_axis, forcing_inputs, reset_days, zero_crossing_indices, time_nday_f, time_doy_f, time_year_f = input_data
+
     # Update the model instance with the provided parameters
     for idx, value in enumerate(param_values):
         param_name = salib_problem["names"][idx]
@@ -183,15 +187,32 @@ def update_and_run_model(param_values, model_instance, input_data, param_info, s
             phase = param_info.loc[param_info["Name"] == param_name, "Phase"].values[0]
             update_attribute_in_phase(model_instance, full_path, value, phase)
         else:
-            # Update regular parameters
-            update_attribute(model_instance, full_path, value)
+            if (param_name == "sowingDays") or (param_name == "harvestDays"):
+                # Update parameters that must be defined as a list type
+                if isinstance(value, list):
+                    update_attribute(model_instance, full_path, value)
+                else:
+                    update_attribute(model_instance, full_path, [value])
+            else:
+                # Update regular parameters
+                update_attribute(model_instance, full_path, value)
 
-    # Unpack input data
-    ODEModelSolver, time_axis, time_index, forcing_inputs, reset_days, zero_crossing_indices = input_data
+        # Make sure the solver knows about the sowing and harvest dates as well (to reset the state variables like GDD and VD)
+        if (param_name == "sowingDays") or (param_name == "harvestDays"):
+            # Find value of time_nday_f where time_doy_f == sowingDay and time_year_f == sowingYear.
+            sowingDay, sowingYear = model_instance.Management.sowingDays, model_instance.Management.sowingYears
+            sowing_nday = time_nday_f[(np.floor(time_doy_f) == sowingDay) & (np.array(time_year_f) == sowingYear)]
+            
+            # Find value of time_nday_f where time_doy_f == sowingDay and time_year_f == sowingYear.
+            harvestDay, harvestYear = model_instance.Management.harvestDays, model_instance.Management.harvestYears
+            harvest_nday = time_nday_f[(np.floor(time_doy_f) == harvestDay) & (np.array(time_year_f) == harvestYear)]
+            
+            # Set reset_days to be the updated sowing and harvest nday
+            reset_days = [sowing_nday[0], harvest_nday[0]]
 
     # Run the model and get the outputs
     model_outputs = run_model_and_get_outputs(
-        model_instance, ODEModelSolver, time_axis, time_index, forcing_inputs, reset_days, zero_crossing_indices
+        model_instance, ODEModelSolver, time_axis, forcing_inputs, reset_days, zero_crossing_indices
     )
 
     return model_outputs

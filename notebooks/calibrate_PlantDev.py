@@ -89,25 +89,25 @@ PlantDevX = PlantGrowthPhases(
     phases=["germination", "vegetative", "anthesis", "grainfill", "maturity"],
     gdd_requirements=[120, 500, 200, 350, 200],
     vd_requirements=[0, 25, 0, 0, 0],
-    # allocation_coeffs=[
-    #     [0.2, 0.1, 0.7, 0.0, 0.0],   # Phase 1
-    #     [0.5, 0.1, 0.4, 0.0, 0.0],   # Phase 2
-    #     [0.25, 0.5, 0.25, 0.0, 0.0], # Phase 3
-    #     [0.1, 0.1, 0.1, 0.7, 0.0],   # Phase 4
-    #     [0.1, 0.1, 0.1, 0.7, 0.0]    # Phase 5
-    # ],
-    # turnover_rates = [
-    #     [0.001, 0.001, 0.001, 0.0, 0.0],  # Phase 1
-    #     [0.01,  0.002, 0.01,  0.0, 0.0],  # Phase 2
-    #     [0.02,  0.002, 0.04,  0.0, 0.0],  # Phase 3
-    #     [0.10,  0.008, 0.10,  0.0, 0.0],  # Phase 4
-    #     [0.50,  0.017, 0.50,  0.0, 0.0]   # Phase 5
-    # ]    ## Turnover rates per pool and developmental phase (days-1))
+    allocation_coeffs=[
+        [0.2, 0.1, 0.7, 0.0, 0.0],   # Phase 1
+        [0.5, 0.1, 0.4, 0.0, 0.0],   # Phase 2
+        [0.25, 0.5, 0.25, 0.0, 0.0], # Phase 3
+        [0.1, 0.1, 0.1, 0.7, 0.0],   # Phase 4
+        [0.1, 0.1, 0.1, 0.7, 0.0]    # Phase 5
+    ],
+    turnover_rates = [
+        [0.001, 0.001, 0.001, 0.0, 0.0],  # Phase 1
+        [0.01,  0.002, 0.01,  0.0, 0.0],  # Phase 2
+        [0.02,  0.002, 0.04,  0.0, 0.0],  # Phase 3
+        [0.10,  0.008, 0.10,  0.0, 0.0],  # Phase 4
+        [0.50,  0.017, 0.50,  0.0, 0.0]   # Phase 5
+    ]    ## Turnover rates per pool and developmental phase (days-1))
 )
 
 PlantX = PlantModuleCalculator(
     Site=SiteX,
-    # Management=ManagementX,
+    Management=ManagementX,
     PlantDev=PlantDevX,
     GDD_method="linear1",
     GDD_Tbase=0.0,
@@ -281,7 +281,6 @@ def run_model_and_get_outputs(Plant, ODEModelSolver, time_axis, forcing_inputs, 
     # else:
     #     it_mature = -1    # if there is no harvest day specified, we just take the last day of the simulation. 
 
-    # import pdb; pdb.set_trace()
     # Filter out transitions that occur on or before the sowing day
     # it_phase_transitions = [t for t in it_phase_transitions if time_axis[t] > time_axis[it_sowing+1]]
     it_phase_transitions = [t for t in it_phase_transitions if t > int(it_sowing+1)]
@@ -312,7 +311,6 @@ def run_model_and_get_outputs(Plant, ODEModelSolver, time_axis, forcing_inputs, 
         tdoy_anth1 = time_axis[it_harvest]
     tdoy_harvest = time_axis[it_harvest]   # ordinal day-of-year at harvest
     
-    # import pdb; pdb.set_trace()
     # Model output (of observables) given the parameter vector p
     # - this is the model output that we compare to observations and use to calibrate the parameters
     M_p = np.array([
@@ -532,7 +530,7 @@ plt.show()
 # %% [markdown]
 # ### Run Full Biophysical Model
 #
-# **Here you can now use the optimised parameters (assigned to the Management and PlantDev modules) as input to the full DAESIM2 biophysical model and run the full model to get simulated carbon, water, yield, etc.**
+# **Here you can now use the optimised parameters (assigned to the Management and PlantDev modules and written to a parameters json file above) as input to the full DAESIM2 biophysical model and run the full model to get simulated carbon, water, yield, etc.**
 
 # %%
 from daesim2_analysis.experiment import Experiment
@@ -543,8 +541,20 @@ from daesim2_analysis.run import *
 from pandas import Timestamp
 
 # %%
-
-# %%
+## Forcing data mapping of input variable names to output variable names
+d_fd_mapping = {
+    'Climate_solRadswskyb_f': 'forcing 01',
+    'Climate_solRadswskyd_f': 'forcing 02',
+    'Climate_airTempCMin_f': 'forcing 03',
+    'Climate_airTempCMax_f': 'forcing 04',
+    'Climate_airPressure_f': 'forcing 05',
+    'Climate_airRH_f': 'forcing 06',
+    'Climate_airCO2_f': 'forcing 07',
+    'Climate_airO2_f': 'forcing 08',
+    'Climate_airU_f': 'forcing 09',
+    'Climate_soilTheta_z_f': 'forcing 10',
+    'Climate_doy_f': 'forcing 11',
+    'Climate_year_f': 'forcing 12'}
 
 # %%
 experiment = Experiment(
@@ -563,26 +573,8 @@ experiment = Experiment(
 )
 
 # %%
-
-# %%
 parameters: Parameters = experiment.parameters
 param_values = parameters.sample(experiment.n_samples)
-
-# %%
-experiment.PlantX.PlantDev.gdd_requirements
-
-# %%
-parameters.optimised
-
-# %%
-2 gdd_requirements  initial = 120 , optimised = 90
-3 gdd_requirements  initial = 500 , optimised = 571
-4 gdd_requirements  initial = 200 , optimised = 103
-5 gdd_requirements  initial = 350 , optimised = 297
-6 gdd_requirements  initial = 200 , optimised = 306
-
-# %%
-experiment.PlantX.Management.cropType
 
 # %%
 # Call the function that updates parameters, runs the model and returns selected outputs
@@ -593,17 +585,8 @@ model_output = update_and_run_model(
     parameters.df,
     parameters.problem)
 
-# %%
-experiment.PlantX.Management
-
-# %%
-
-# %%
-print(experiment.PlantX.PlantDev.phases)
-print(experiment.PlantX.PlantDev.gdd_requirements)
-
-# %%
-experiment.PlantX.Management.sowingDays
+# %% [markdown]
+# ## Plot Results
 
 # %%
 fig, axes = plt.subplots(5,1,figsize=(8,10),sharex=True)
@@ -647,111 +630,8 @@ yield_from_seed_Cpool = model_output["Cseed"][itax_harvest]/100 * (1/experiment.
 axes[4].annotate("Yield = %1.2f t/ha" % (yield_from_seed_Cpool), (0.01,0.93), xycoords='axes fraction', verticalalignment='top', horizontalalignment='left', fontsize=12)
 axes[4].annotate("Harvest index = %1.2f" % (harvest_index_maturity), (0.01,0.81), xycoords='axes fraction', verticalalignment='top', horizontalalignment='left', fontsize=12)
 
-# axes[0].set_xlim([experiment.PlantX.Management.sowingDays[0],model_output[d_fd_mapping['Climate_doy_f']][-1]])
+axes[0].set_xlim([experiment.PlantX.Management.sowingDays[0], model_output[d_fd_mapping['Climate_doy_f']][-1]])
 
 plt.tight_layout()
 
 # %%
-
-# %%
-
-# %%
-## DAESIM2
-from daesim.plant_1000 import PlantModuleCalculator as PlantModuleCalculatorFull
-from daesim.soillayers import SoilLayers
-from daesim.canopylayers import CanopyLayers
-from daesim.canopyradiation import CanopyRadiation
-from daesim.boundarylayer import BoundaryLayerModule
-from daesim.leafgasexchange import LeafGasExchangeModule
-from daesim.leafgasexchange2 import LeafGasExchangeModule2
-from daesim.canopygasexchange import CanopyGasExchange
-from daesim.plantcarbonwater import PlantModel as PlantCH2O
-from daesim.plantallocoptimal import PlantOptimalAllocation
-
-# PlantDevX = PlantGrowthPhases(
-#     phases=["germination", "vegetative", "anthesis", "grainfill", "maturity"],
-#     # gdd_requirements=[94, 555, 277, 405, 420],
-#     # gdd_requirements=[133,572,102,353,387],
-#     gdd_requirements=[92,568,103,335,164],
-#     vd_requirements=[0, 25, 0, 0, 0],
-#     allocation_coeffs=[
-#         [0.2, 0.1, 0.7, 0.0, 0.0],   # Phase 1
-#         [0.5, 0.1, 0.4, 0.0, 0.0],   # Phase 2
-#         [0.35, 0.3, 0.35, 0.0, 0.0], # Phase 3
-#         [0.22, 0.06, 0.22, 0.5, 0.0],   # Phase 4
-#         [0.20, 0.0, 0.20, 0.6, 0.0]    # Phase 5
-#     ],
-#     turnover_rates = [
-#         [0.001, 0.001, 0.001, 0.0, 0.0],  # Phase 1
-#         [0.01,  0.002, 0.01,  0.0, 0.0],  # Phase 2
-#         [0.02,  0.002, 0.04,  0.0, 0.0],  # Phase 3
-#         [0.10,  0.008, 0.10,  0.0, 0.0],  # Phase 4
-#         [0.50,  0.017, 0.50,  0.0, 0.0]   # Phase 5
-#     ]    ## Turnover rates per pool and developmental phase (days-1))
-# )
-
-
-
-# ManagementX = ManagementModule(cropType='Canola', sowingDay=130, harvestDay=339)
-# ManagementX = ManagementModule(cropType='Canola', sowingDays=[156], sowingYears=[2019], harvestDays=[307], harvestYears=[2019])
-BoundLayerX = BoundaryLayerModule(Site=SiteX)
-LeafX = LeafGasExchangeModule2(Site=SiteX,Vcmax_opt=60e-6,Jmax_opt_rVcmax=0.89,Jmax_opt_rVcmax_method="log")
-CanopyX = CanopyLayers(nlevmlcan=3)
-CanopyRadX = CanopyRadiation(Canopy=CanopyX)
-CanopyGasExchangeX = CanopyGasExchange(Leaf=LeafX,Canopy=CanopyX,CanopyRad=CanopyRadX)
-SoilLayersX = SoilLayers(nlevmlsoil=2,z_max=2.0)
-PlantCH2OX = PlantCH2O(Site=SiteX,SoilLayers=SoilLayersX,CanopyGasExchange=CanopyGasExchangeX,BoundaryLayer=BoundLayerX,maxLAI=6.0,ksr_coeff=6000,SLA=0.030)
-PlantAllocX = PlantOptimalAllocation(PlantCH2O=PlantCH2OX) #,dWL_factor=1.02,dWR_factor=1.02)
-PlantFullX = PlantModuleCalculatorFull(
-    Site=SiteX,
-    Management=ManagementX,
-    PlantDev=PlantDevX,
-    PlantCH2O=PlantCH2OX,
-    PlantAlloc=PlantAllocX,
-    GDD_method="linear1",
-    GDD_Tbase=0.0,
-    GDD_Tupp=25.0,
-    hc_max_GDDindex=sum(PlantDevX.gdd_requirements[0:2])/PlantDevX.totalgdd,
-    d_r_max=2.0,
-    Vmaxremob=1.0,
-    Kmremob=1.0,
-    remob_phase=["grainfill","maturity"],
-    specified_phase="anthesis",
-    grainfill_phase=["grainfill","maturity"],
-    GY_B=400,
-    GY_W_TKWseed_base=2.9,
-)
-
-# %%
-## Define the callable calculator that defines the right-hand-side ODE function
-PlantXCalc = PlantX.calculate
-
-# Model = ODEModelSolver(calculator=PlantXCalc, states_init=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], time_start=time_axis[np.where(time_axis == PlantX.Management.sowingDay)[0][0]:], log_diagnostics=True)
-Model = ODEModelSolver(calculator=PlantXCalc, states_init=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], time_start=time_axis[0], log_diagnostics=True)
-
-forcing_inputs = [Climate_solRadswskyb_f,
-                  Climate_solRadswskyd_f,
-                  Climate_airTempCMin_f,
-                  Climate_airTempCMax_f,
-                  Climate_airPressure_f,
-                  Climate_airRH_f,
-                  Climate_airCO2_f,
-                  Climate_airO2_f,
-                  Climate_airU_f,
-                  Climate_soilTheta_z_f,
-                  Climate_doy_f,
-                  Climate_year_f]
-
-reset_days = [np.int64(135), np.int64(325)] #[PlantX.Management.sowingDay, PlantX.Management.harvestDay]
-
-Model.reset_diagnostics()
-
-res = Model.run(
-    time_axis=time_axis,
-    forcing_inputs=forcing_inputs,
-    solver="euler",
-    zero_crossing_indices=[4,5,6],
-    reset_days=reset_days,
-    # rtol=1e-2,
-    # atol=1e-2
-)
