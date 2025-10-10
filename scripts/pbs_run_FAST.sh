@@ -17,6 +17,7 @@ n_samples=600
 dir_results=/g/data/xe2/ya6227/daesim2-analysis-data/FAST_results
 path_df_forcing_1=/g/data/xe2/ya6227/daesim2-analysis-data/DAESim_forcing_data/Rutherglen_1971.csv
 paths_df_forcing=("$path_df_forcing_1")
+path_parameters_file='parameters/Fast1.json'
 
 base_name=""
 for path in "${paths_df_forcing[@]}"; do
@@ -45,4 +46,5 @@ python3.9 notebooks/FAST_sensitivity_analysis_parallel.py \
   --n_samples $n_samples \
   --dir_results $dir_results \
   --paths_df_forcing "$(IFS=,; echo "${paths_df_forcing[*]}")" \
+  --path_parameters_file $path_parameters_file \
   > ${JOB_DIR}/script_output.txt 2> ${JOB_DIR}/script_error.txt

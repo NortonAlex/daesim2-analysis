@@ -335,3 +335,186 @@ https://www.educative.io/answers/what-is-self-in-python
 - Slack
 - gfortran
 - cmake
+
+
+## Experiment
+
+
+The `Experiment` class ties together configuration, data loading, model setup, and sensitivity analysis. Below is a concise overview:
+
+### Inputs
+| Argument        | Type                                         | Default                                                       | Description                                                             |
+|-----------------|----------------------------------------------|---------------------------------------------------------------|-------------------------------------------------------------------------|
+| `xsite`         | `str`                                        | `'Milgadara_2018'`                                            | Unique site/run identifier (used in output folders).                   |
+| `CLatDeg`       | `float`                                      | `-36.05`                                                      | Site latitude in decimal degrees.                                       |
+| `CLonDeg`       | `float`                                      | `146.5`                                                       | Site longitude in decimal degrees.                                      |
+| `tz`            | `int`                                        | `10`                                                          | Time zone offset from UTC (e.g., 10 for Australia/Sydney).              |
+| `crop_type`     | `str`                                        | `'Wheat'`                                                     | Crop species or variety identifier.                                     |
+| `sowing_dates`  | `List[date]`                                 | `[date(2018,1,1)]`                                            | List of sowing dates.                                                   |
+| `harvest_dates` | `List[date]`                                 | `[date(2018,12,31)]`                                          | List of harvest dates.                                                  |
+| `n_processes`   | `int`                                        | `1`                                                           | Number of parallel worker processes.                                    |
+| `n_samples`     | `int`                                        | `100`                                                         | Number of parameter samples for FAST.                                    |
+| `dir_results`   | `str`                                        | `'DAESIM_data/FAST_results'`                                  | Base directory for storing results.                                     |
+| `df_forcing`    | `List[str]` or `DataFrame`                   | `['.../DAESim_forcing_Milgadara_2018.csv']`                  | Forcing CSV paths or pre-loaded DataFrame.                              |
+| `parameters`    | `str` or `Parameters`                        | `'parameters/Fast1.json'`                                     | Path or object for SALib parameter definitions.                         |
+| `daesim_config` | `str` or `DAESIMConfig`                      | `'daesim_configs/daesim_config1.json'`                        | Path or object for DAESIM module argument defaults.                     |
+
+### Initialization Sequence
+1. **Load forcing data**: If `df_forcing` is a path (or list of paths), it is read into a pandas `DataFrame`.
+2. **Setup output structure**: Creates `dir_results/{xsite}/parameters` and defines `path_Mpx`.
+3. **Convert dates**: Converts `sowing_dates` and `harvest_dates` into `pandas.Timestamp`.
+4. **Load configs**:
+   - `Parameters` via `Parameters.__from_file__` if a filepath is given.
+   - `DAESIMConfig` via `DAESIMConfig.from_json_dict` if a filepath is given.
+5. **Instantiate DAESIM modules** in dependency order:
+   ```python
+   SiteX → ForcingDataX → ManagementX → PlantDevX → BoundaryLayerX →
+   LeafX → CanopyX → CanopyRadX → CanopyGasExchangeX → SoilLayersX →
+   PlantCH2OX → PlantAllocX → PlantX (PlantModuleCalculator)
+
+6. Setup solver: Wraps PlantX.calculate in ODEModelSolver, setting Model and assembling input_data.
+
+### Examples
+
+## Examples
+
+### 1. Using JSON configs + CLI
+```bash
+python run_FAST.py \
+  --n_processes 4 \
+  --n_samples 200 \
+  --crop_type Wheat \
+  --CLatDeg -36.05 \
+  --CLonDeg 146.5 \
+  --dir_results ./results \
+  --paths_df_forcing data/forcings1.csv,data/forcings2.csv \
+  --parameters parameters/Fast1.json \
+  --daesim_config daesim_configs/DAESIM1.json
+
+----------------------------------------------------------------------------------
+#DAESIMConfig.json
+{
+    "plantgrowthphases.PlantGrowthPhases": {
+        "phases": [
+					"germination",
+					"vegetative",
+					"spike",
+					"anthesis",
+					"grainfill",
+					"maturity"
+				],
+        "gdd_requirements": [50,800,280,150,300,300],
+        "vd_requirements": [0,30,0,0,0,0],
+        "allocation_coeffs": [
+            [0.2,0.1,0.7,0.0,0.0],
+            [0.5,0.1,0.4,0.0,0.0],
+            [0.3,0.4,0.3,0.0,0.0],
+            [0.3,0.4,0.3,0.0,0.0],
+            [0.1,0.1,0.1,0.7,0.0],
+            [0.1,0.1,0.1,0.7,0.0]
+        ],
+        "turnover_rates": [
+            [0.001,0.001,0.001,0.0,0.0],
+            [0.01,0.002,0.008,0.0,0.0],
+            [0.01,0.002,0.008,0.0,0.0],
+            [0.01,0.002,0.008,0.0,0.0],
+            [0.033,0.016,0.033,0.0002,0.0],
+            [0.10,0.033,0.10,0.0002,0.0]
+        ]
+    },
+    "canopylayers.CanopyLayers": {
+        "nlevmlcan": 3
+    }
+}
+
+#Parameters.json
+{
+  "Module Path": ["PlantCH2O.CanopyGasExchange.Leaf", "PlantCH2O.CanopyGasExchange.Leaf", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantDev", "PlantDev", "", "", "", ""],
+  "Module": ["Leaf", "Leaf", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantDev", "PlantDev", "", "", "", ""],
+  "Name": ["Vcmax_opt", "g1", "SLA", "maxLAI", "ksr_coeff", "Psi_f", "sf", "gdd_requirements", "gdd_requirements", "GY_FE", "GY_SDW_50", "CI", "d_r_max"],
+  "Unit": ["mol CO2 m-2 s-1", "kPa^0.5", "m2 g d.wt-1", "m2 m-2", "g d.wt-1 m-1", "MPa", "MPa-1", "deg C d", "deg C d", "thsnd grains g d.wt spike-1", "g d.wt m-2", "-", "m"],
+  "Initial Value": [60e-6, 3, 0.03, 6, 1000, -3.5, 3.5, 900, 650, 0.1, 100, 0.75, 0.5],
+  "Min": [30e-6, 1, 0.015, 5, 300, -8.0, 1.5, 600, 350, 0.08, 80, 0.5, 0.15],
+  "Max": [120e-6, 6, 0.035, 7, 5000, -1.0, 7.0, 1800, 700, 0.21, 150, 1.0, 0.66],
+  "Phase Specific": [false, false, false, false, false, false, false, true, true, false, false, false, false],
+  "Phase": [null, null, null, null, null, null, null, "vegetative", "grainfill", null, null, null, null]
+}
+```
+### 2. Using Interactive Instantiation Python
+
+```py
+from datetime import date
+from daesim2_analysis.experiment import Experiment
+
+# Default interactive experiment (uses defaults defined in Experiment)
+exp = Experiment()
+print(exp)
+
+# Fully customized instantiation
+exp_custom = Experiment(
+    xsite="Milgadara_2018",
+    CLatDeg=-36.05,
+    CLonDeg=146.5,
+    crop_type="Wheat",
+    sowing_dates=[date(2018, 1, 1)],
+    harvest_dates=[date(2018, 12, 31)],
+    n_processes=4,
+    n_samples=200,
+    dir_results="./results",
+    df_forcing=[
+        "data/forcings1.csv",
+        "data/forcings2.csv"
+    ],
+    parameters="parameters/Fast1.json",
+    daesim_config="daesim_configs/daesim_config1.json"
+)
+
+# Access instantiated modules and solver
+print("Site lat/lon:", exp_custom.SiteX.CLatDeg, exp_custom.SiteX.CLonDeg)
+```
+
+### 3. Programmatic instantiation with pre-loaded objects
+
+```py
+import pandas as pd
+from daesim2_analysis.experiment import Experiment
+from daesim2_analysis.parameters import Parameters
+from daesim2_analysis.daesim_config import DAESIMConfig
+from daesim2_analysis.utils import load_df_forcing
+
+# 1. Load forcing data into a DataFrame
+# df_force = pd.read_csv("data/forcings1.csv", parse_dates=["Date"])
+df_forcing = load_df_forcing("DAESIM_data/DAESim_forcing_data/DAESim_forcing_Milgadara_2018.csv")
+
+# 2. Create a Parameters object (e.g. from JSON or dict)
+
+parameters = Parameters(
+        paths           = ["PlantCH2O.CanopyGasExchange.Leaf", "PlantCH2O.CanopyGasExchange.Leaf", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantDev", "PlantDev", "", "", "", ""],
+        modules         = ["Leaf", "Leaf", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantCH2O", "PlantDev", "PlantDev", "", "", "", ""],
+        names           = ["Vcmax_opt", "g1", "SLA", "maxLAI", "ksr_coeff", "Psi_f", "sf", "gdd_requirements", "gdd_requirements", "GY_FE", "GY_SDW_50", "CI", "d_r_max"],
+        units           = ["mol CO2 m-2 s-1", "kPa^0.5", "m2 g d.wt-1", "m2 m-2", "g d.wt-1 m-1", "MPa", "MPa-1", "deg C d", "deg C d", "thsnd grains g d.wt spike-1", "g d.wt m-2", "-", "m"],
+        init            = [60e-6, 3, 0.03, 6, 1000, -3.5, 3.5, 900, 650, 0.1, 100, 0.75, 0.5],
+        min             = [30e-6, 1, 0.015, 5, 300, -8.0, 1.5, 600, 350, 0.08, 80, 0.5, 0.15],
+        max             = [120e-6, 6, 0.035, 7, 5000, -1.0, 7.0, 1800, 700, 0.21, 150, 1.0, 0.66],
+        phase_specific  = [False, False, False, False, False, False, False, True, True, False, False, False, False],
+        phase           = [None, None, None, None, None, None, None, "vegetative", "grainfill", None, None, None, None]
+)
+
+daesim_config = DAESIMConfig.from_json_dict("daesim_configs/DAESIM1.json")  # or: DAESIMConfig.from_dict(your_config_dict)
+
+# # 4. Instantiate Experiment with DataFrame, Parameters, and DAESIMConfig
+exp_programmatic = Experiment(
+	xsite="TestSite",
+	crop_type='Wheat',
+	CLatDeg=-36.05,
+	CLonDeg=148.01,
+	df_forcing=df_forcing,
+	parameters=parameters,
+	daesim_config=daesim_config,
+)
+
+# # Verify
+print(exp_programmatic.ForcingDataX.df.head())
+print(exp_programmatic.parameters.df.head())
+print(exp_programmatic.daesim_config.df.head())
+```

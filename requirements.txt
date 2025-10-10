@@ -16,4 +16,4 @@ notebook
 #nb_black
 
 # Git-based dependency
-daesim @ git+https://github.com/NortonAlex/DAESIM@71143d098cffbc8be3708b1a1a121ebe342a07ac#egg=daesim
+daesim @ git+https://github.com/NortonAlex/DAESIM@6c6e0e93ad7909b8355268a4c7b6307396251173#egg=daesim

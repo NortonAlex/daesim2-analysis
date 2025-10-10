@@ -1,0 +1,221 @@
+import sys
+import attr
+from argparse import ArgumentParser
+from typing_extensions import Self
+from pandas import Timestamp
+from datetime import date
+from os import makedirs
+from os.path import join
+from typing_extensions import Callable
+
+from daesim.management import ManagementModule
+from daesim.plantgrowthphases import PlantGrowthPhases
+from daesim.boundarylayer import BoundaryLayerModule
+from daesim.leafgasexchange2 import LeafGasExchangeModule2
+from daesim.canopygasexchange import CanopyGasExchange
+from daesim.plantcarbonwater import PlantModel as PlantCH2O
+from daesim.plantallocoptimal import PlantOptimalAllocation
+from daesim.canopylayers import CanopyLayers
+from daesim.canopyradiation import CanopyRadiation
+from daesim.soillayers import SoilLayers
+from daesim.plant_1000 import PlantModuleCalculator
+from daesim.utils import ODEModelSolver
+from daesim.climate import *
+from functools import partial
+from daesim2_analysis.forcing_data import ForcingData
+from daesim2_analysis.daesim_module_partial_load import DAESIMModulePartialLoad
+from daesim2_analysis.utils import *
+from daesim2_analysis.parameters import Parameters
+from typing_extensions import Union
+from daesim2_analysis.daesim_config import DAESIMConfig
+from pandas import DataFrame
+
+def is_interactive() -> bool: return hasattr(sys, 'ps1') or sys.flags.interactive
+
+
+@attr.define(frozen=True)
+class Experiment:
+    xsite                   : str = 'Milgadara_2018'
+    CLatDeg                 : float = -36.05
+    CLonDeg                 : float = 146.5
+    tz                      : int = 10
+    crop_type               : str = "Wheat"
+    sowing_dates            : list[date] = attr.Factory(lambda: [Timestamp(year=2018,month=1,day=1)])
+    harvest_dates           : list[date] = attr.Factory(lambda: [Timestamp(year=2018,month=12,day=31)])
+    n_processes             : int = 1
+    n_samples               : int = 100
+    dir_results             : str = "DAESIM_data/FAST_results"
+    df_forcing              : Union[list[str], DataFrame]  = attr.Factory(lambda: ["DAESIM_data/DAESim_forcing_data/DAESim_forcing_Milgadara_2018.csv"])
+    parameters              : Union[str, Parameters] = "parameters/Fast1.json"
+    daesim_config           : Union[str, DAESIMConfig] = "daesim_configs/daesim_config1.json"
+    df_forcing_type         : str = '0'
+  
+
+    SiteX                   : ClimateModule = attr.field(init=False)
+    ForcingDataX            : ForcingData = attr.field(init=False)
+    ManagementX             : ManagementModule = attr.field(init=False)
+    PlantDevX               : PlantGrowthPhases = attr.field(init=False)
+    BoundaryLayerX          : BoundaryLayerModule = attr.field(init=False)
+    LeafX                   : LeafGasExchangeModule2 = attr.field(init=False)
+    CanopyX                 : CanopyLayers = attr.field(init=False)
+    CanopyRadX              : CanopyRadiation = attr.field(init=False)
+    CanopyGasExchangeX      : CanopyGasExchange = attr.field(init=False)
+    SoilLayersX             : SoilLayers = attr.field(init=False)
+    PlantCH2OX              : PlantCH2O = attr.field(init=False)
+    PlantAllocX             : PlantOptimalAllocation = attr.field(init=False)
+    PlantX                  : PlantModuleCalculator = attr.field(init=False)
+    PlantXCalc              : Callable = attr.field(init=False)
+    Model                   : ODEModelSolver = attr.field(init=False)
+    input_data              : list = attr.field(init=False)
+
+
+    title                   : str = attr.field(init=False)
+    description             : str = attr.field(init=False)
+    dir_xsite_FAST_results  : str = attr.field(init=False)
+    dir_xsite_parameters    : str = attr.field(init=False)
+    path_Mpx                : str = attr.field(init=False)
+
+    def _setup_output_structure(s: Self):
+        xsite = s.xsite
+        title = f'DAESIM2-Plant FAST Sensitivity Analysis {xsite}'
+        object.__setattr__(s, 'title', title)
+        object.__setattr__(s, 'description', title)
+        dir_fast = join(s.dir_results, xsite)
+        params_dir = join(dir_fast, 'parameters')
+        object.__setattr__(s, 'dir_xsite_FAST_results', dir_fast)
+        object.__setattr__(s, 'dir_xsite_parameters', params_dir)
+        object.__setattr__(s, 'path_Mpx', join(dir_fast, 'Mpx.npy'))
+        makedirs(dir_fast, exist_ok=True)
+        makedirs(params_dir, exist_ok=True)
+
+    def _dates_to_timestamp(s: Self):
+        object.__setattr__(s, 'sowing_dates', [Timestamp(d) for d in s.sowing_dates])
+        object.__setattr__(s, 'harvest_dates', [Timestamp(d) for d in s.harvest_dates])
+
+    def _initialise_daesim_modules(s: Self, daesim_config: DAESIMConfig):
+        
+        SiteX = ClimateModule(CLatDeg=s.CLatDeg,CLonDeg=s.CLonDeg,timezone=s.tz)
+        ForcingDataX = ForcingData(
+            SiteX=SiteX,
+            sowing_dates=s.sowing_dates,
+            harvest_dates=s.harvest_dates,
+            df=s.df_forcing,
+            df_type=s.df_forcing_type
+        )
+        ManagementX = ManagementModule(
+            cropType=s.crop_type,
+            sowingDays=ForcingDataX.sowing_days,
+            harvestDays=ForcingDataX.harvest_days,
+            sowingYears=ForcingDataX.sowing_years,
+            harvestYears=ForcingDataX.harvest_years,
+            **daesim_config.get_module_args('management.ManagementModule')
+        )
+        PlantDevX = PlantGrowthPhases(**daesim_config.get_module_args('plantgrowthphases.PlantGrowthPhases'))
+        BoundaryLayerX = BoundaryLayerModule(Site=SiteX,**daesim_config.get_module_args('boundarylayer.BoundaryLayerModule'))
+        LeafX = LeafGasExchangeModule2(Site=SiteX,**daesim_config.get_module_args('leafgasexchange2.LeafGasExchangeModule2'))
+        CanopyX = CanopyLayers(**daesim_config.get_module_args('canopylayers.CanopyLayers'))
+        CanopyRadX = CanopyRadiation(Canopy=CanopyX,**daesim_config.get_module_args('canopyradiation.CanopyRadiation'))
+        CanopyGasExchangeX = CanopyGasExchange(Leaf=LeafX, Canopy=CanopyX, CanopyRad=CanopyRadX,**daesim_config.get_module_args('canopygasexchange.CanopyGasExchange'))
+        SoilLayersX = SoilLayers(nlevmlsoil=ForcingDataX.nlevmlsoil,**daesim_config.get_module_args('soillayers.SoilLayers'))
+        PlantCH2OX = PlantCH2O(
+            Site=SiteX,
+            SoilLayers=SoilLayersX,
+            CanopyGasExchange=CanopyGasExchangeX,
+            BoundaryLayer=BoundaryLayerX,
+            **daesim_config.get_module_args('plantcarbonwater.PlantCH2O')
+        )
+        PlantAllocX = PlantOptimalAllocation(PlantCH2O=PlantCH2OX,**daesim_config.get_module_args('plantallocoptimal.PlantOptimalAllocation'))
+        PlantX = PlantModuleCalculator(
+            Site=SiteX,
+            Management=ManagementX,
+            PlantDev=PlantDevX,
+            PlantCH2O = PlantCH2OX,
+            PlantAlloc=PlantAllocX,
+            **daesim_config.get_module_args('plant_1000.PlantModuleCalculator')
+        )
+        PlantXCalc = PlantX.calculate
+        Model = ODEModelSolver(
+            calculator=PlantXCalc,
+            states_init=[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            time_start=ForcingDataX.time_axis[0],
+            log_diagnostics=True
+        )
+        input_data = [
+            ODEModelSolver,
+            ForcingDataX.time_axis,
+            ForcingDataX.inputs,
+            ForcingDataX.reset_days,
+            ForcingDataX.zero_crossing_indices,
+            ForcingDataX.time_nday_f,
+            ForcingDataX.time_doy_f,
+            ForcingDataX.time_year_f
+        ]
+
+        object.__setattr__(s, 'SiteX', SiteX)
+        object.__setattr__(s, 'ForcingDataX', ForcingDataX)
+        object.__setattr__(s, 'ManagementX', ManagementX)
+        object.__setattr__(s, 'PlantDevX', PlantDevX)
+        object.__setattr__(s, 'BoundaryLayerX', BoundaryLayerX)
+        object.__setattr__(s, 'LeafX', LeafX)
+        object.__setattr__(s, 'CanopyX', CanopyX)
+        object.__setattr__(s, 'CanopyRadX', CanopyRadX)
+        object.__setattr__(s, 'CanopyGasExchangeX', CanopyGasExchangeX)
+        object.__setattr__(s, 'SoilLayersX', SoilLayersX)
+        object.__setattr__(s, 'PlantCH2OX', PlantCH2OX)
+        object.__setattr__(s, 'PlantAllocX', PlantAllocX)
+        object.__setattr__(s, 'PlantX', PlantX)
+        object.__setattr__(s, 'PlantXCalc', PlantXCalc)
+        object.__setattr__(s, 'Model', Model)
+        object.__setattr__(s, 'input_data', input_data)
+        
+
+    def __attrs_post_init__(s: Self):
+        if not isinstance(s.df_forcing, DataFrame):
+            object.__setattr__(s, 'df_forcing', load_df_forcing(s.df_forcing))
+        s._setup_output_structure()
+        s._dates_to_timestamp()
+                
+        if isinstance(s.parameters, str):
+            object.__setattr__(s, 'parameters', Parameters.__from_file__(s.parameters))
+        if isinstance(s.daesim_config, str):
+            object.__setattr__(s, 'daesim_config', DAESIMConfig.from_json_dict(s.daesim_config))
+
+
+        s._initialise_daesim_modules(s.daesim_config)
+
+    
+        
+    @staticmethod
+    def from_cli() -> 'Experiment':
+        parser = ArgumentParser()
+        g1 = parser.add_argument_group('Optimisation Arguments')
+        g1.add_argument('--n_processes', type=int, required=True)
+        g1.add_argument('--n_samples', type=int, required=True)
+        g2 = parser.add_argument_group('Sim Arguments')
+        g2.add_argument('--xsite', type=str, required=True)
+        g2.add_argument('--crop_type', type=str, required=True)
+        g2.add_argument('--CLatDeg', type=float, required=True)
+        g2.add_argument('--CLonDeg', type=float, required=True)
+        g2.add_argument('--dir_results', type=str, required=True)
+        g2.add_argument('--df_forcing', type=str, required=True)
+        g2.add_argument('--parameters', type=str, required=True)
+        g2.add_argument('--daesim_config', type=str, required=True)
+        ns = parser.parse_args()
+        paths = ns.df_forcing.split(',')
+
+        return Experiment(
+            xsite = ns.xsite,
+            crop_type=ns.crop_type,
+            CLatDeg=ns.CLatDeg,
+            CLonDeg=ns.CLonDeg,
+            n_processes=ns.n_processes,
+            n_samples=ns.n_samples,
+            dir_results=ns.dir_results,
+            df_forcing=paths,
+            parameters=ns.parameters,
+            daesim_config=ns.daesim_config
+        )
+        
+
+if __name__ == '__main__':
+    exp = Experiment()
