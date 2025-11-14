@@ -101,7 +101,6 @@ class ForcingData:
         object.__setattr__(s, 'nrundays_f', s.df.index.size)
 
     def time_descretisation(s: Self):
-        # time_nday_f, time_doy_f, time_year_f = s.SiteX.time_discretisation(s.start_doy_f, s.start_year_f, nrundays=s.nrundays_f)
         time_nday_f, time_doy_f, time_year_f = s.SiteX.time_discretisation(s.start_doy_f, s.start_year_f, end_doy=s.end_doy_f, end_year=s.end_year_f)
         time_doy_f = [time_doy_f[i]+0.5 for i in range(len(time_doy_f))]
         object.__setattr__(s, 'time_nday_f', time_nday_f)
