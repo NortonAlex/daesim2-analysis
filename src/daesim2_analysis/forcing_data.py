@@ -42,6 +42,8 @@ class ForcingData:
     uniform_moisture_across_layers  : bool = False
     start_doy_f                     : int = field(init=False)
     start_year_f                    : int = field(init=False)
+    end_doy_f                       : int = field(init=False)
+    end_year_f                      : int = field(init=False)
     nrundays_f                      : int = field(init=False)
     time_nday_f                     : list[int] = field(init=False)
     time_doy_f                      : list[float] = field(init=False)
@@ -94,10 +96,13 @@ class ForcingData:
     def set_starts(s: Self):
         object.__setattr__(s, 'start_doy_f', s.df['DOY'].values[0])
         object.__setattr__(s, 'start_year_f', s.df['Year'].values[0])
+        object.__setattr__(s, 'end_doy_f', s.df['DOY'].values[-1])
+        object.__setattr__(s, 'end_year_f', s.df['Year'].values[-1])
         object.__setattr__(s, 'nrundays_f', s.df.index.size)
 
     def time_descretisation(s: Self):
-        time_nday_f, time_doy_f, time_year_f = s.SiteX.time_discretisation(s.start_doy_f, s.start_year_f, nrundays=s.nrundays_f)
+        # time_nday_f, time_doy_f, time_year_f = s.SiteX.time_discretisation(s.start_doy_f, s.start_year_f, nrundays=s.nrundays_f)
+        time_nday_f, time_doy_f, time_year_f = s.SiteX.time_discretisation(s.start_doy_f, s.start_year_f, end_doy=s.end_doy_f, end_year=s.end_year_f)
         time_doy_f = [time_doy_f[i]+0.5 for i in range(len(time_doy_f))]
         object.__setattr__(s, 'time_nday_f', time_nday_f)
         object.__setattr__(s, 'time_doy_f', time_doy_f)
