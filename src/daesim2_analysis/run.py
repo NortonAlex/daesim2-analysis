@@ -179,12 +179,12 @@ def update_and_run_model(param_values, model_instance, input_data, param_info, s
     # Update the model instance with the provided parameters
     for idx, value in enumerate(param_values):
         param_name = salib_problem["names"][idx]
-        param_path = param_info.loc[param_info["Name"] == param_name, "Module Path"].values[0]
+        param_path = param_info.loc[idx]["Module Path"]
         full_path = f"{param_path}.{param_name}"
 
-        if param_info.loc[param_info["Name"] == param_name, "Phase Specific"].values[0]:
+        if param_info.loc[idx]["Phase Specific"]:
             # Handle phase-specific parameters
-            phase = param_info.loc[param_info["Name"] == param_name, "Phase"].values[0]
+            phase = param_info.loc[idx]['Phase']
             update_attribute_in_phase(model_instance, full_path, value, phase)
         else:
             if (param_name == "sowingDays") or (param_name == "harvestDays"):
