@@ -212,9 +212,8 @@ def run_model_and_get_outputs(Plant, ODEModelSolver, time_axis, forcing_inputs, 
                 diagnostics[fstr] = f(time_axis)[:,iz]
     
     # Observation Operator
-    # Calculate model-equivalent observations from model run output
-
-    # # Diagnose time indexes when developmental phase transitions occur
+    
+    # Diagnose time indexes when developmental phase transitions occur
     ngrowing_seasons = (len(Plant.Management.sowingDays) if (isinstance(Plant.Management.sowingDays, int) == False) else 1)
     if ngrowing_seasons > 1:
         # print("Multiple sowing and harvest events occur. Only returning results for first growing season.")
@@ -233,61 +232,19 @@ def run_model_and_get_outputs(Plant, ODEModelSolver, time_axis, forcing_inputs, 
         if Plant.Management.harvestDays is not None:
             it_harvest = np.where(time_axis == reset_days[1])[0][0]  #harvest_steps_itax[0]   # np.where(np.floor(Climate_doy_f(time_axis)) == Plant.Management.harvestDay)[0][0]
         else:
-            it_harvest = -1   # if there is no harvest day specified, we just take the last day of the simulation. 
-
-    # Diagnose time indexes when developmental phase transitions occur
-
-    # Convert the array to a numeric type, handling mixed int and float types
-    idevphase = diagnostics["idevphase_numeric"]   #[it_sowing:it_harvest+1]
-    valid_mask = ~np.isnan(idevphase)
+            it_harvest = -1   # if there is no harvest day specified, we just take
     
-    # Identify all transitions (number-to-NaN, NaN-to-number, or number-to-different-number)
-    it_phase_transitions = np.where(
-        ~valid_mask[:-1] & valid_mask[1:] |  # NaN-to-number
-        valid_mask[:-1] & ~valid_mask[1:] |  # Number-to-NaN
-        (valid_mask[:-1] & valid_mask[1:] & (np.diff(idevphase) != 0))  # Number-to-different-number
-    )[0] + 1
+    # Calculate model-equivalent observations from model run output
+    ## Create datetime array from doy and year outputs
+    xdoy = np.floor(forcing_inputs[-2](time_axis[it_sowing:it_harvest+1]))
+    xyear = np.array(forcing_inputs[-1](time_axis[it_sowing:it_harvest+1]), dtype=int)
+    time_index = pd.to_datetime(xyear.astype(str), format='%Y') + pd.to_timedelta(xdoy - 1, unit='D')
+    itax_sowing0, itax_mature0, itax_harvest0, itax_phase_transitions0 = Plant.Site.time_index_growing_season(time_index, diagnostics['idevphase_numeric'][it_sowing:it_harvest+1], Plant.Management, Plant.PlantDev, iseason=0)
+    itax_sowing = itax_sowing0 + it_sowing
+    itax_mature = min(itax_mature0 + it_sowing, it_harvest)
+    itax_harvest = min(itax_harvest0 + it_sowing, it_harvest)
+    itax_phase_transitions = [min(item + it_sowing, it_harvest) for item in itax_phase_transitions0]
     
-    # Time index for the end of the maturity phase
-    if PlantX.PlantDev.phases.index('maturity') in idevphase:
-        it_mature = np.where(idevphase == PlantX.PlantDev.phases.index('maturity'))[0][-1]    # Index for end of maturity phase
-    elif PlantX.Management.harvestDays is not None: 
-        it_mature = it_harvest    # Maturity developmental phase not completed, so take harvest as the end of growing season
-    else:
-        it_mature = -1    # if there is no harvest day specified, we just take the last day of the simulation. 
-
-    # it_sowing = np.where(time_axis == Plant.Management.sowingDay)[0][0]
-    # if Plant.Management.harvestDay is not None:
-    #     it_harvest = np.where(time_axis == Plant.Management.harvestDay)[0][0]
-    # else:
-    #     it_harvest = -1   # if there is no harvest day specified, we just take the last day of the simulation. 
-
-    # # Convert the array to a numeric type, handling mixed int and float types
-    # idevphase = diagnostics["idevphase_numeric"]
-    # valid_mask = ~np.isnan(idevphase)
-    
-    # # Identify all transitions (number-to-NaN, NaN-to-number, or number-to-different-number)
-    # it_phase_transitions = np.where(
-    #     ~valid_mask[:-1] & valid_mask[1:] |  # NaN-to-number
-    #     valid_mask[:-1] & ~valid_mask[1:] |  # Number-to-NaN
-    #     (valid_mask[:-1] & valid_mask[1:] & (np.diff(idevphase) != 0))  # Number-to-different-number
-    # )[0] + 1
-    
-    # # Time index for the end of the maturity phase
-    # if Plant.PlantDev.phases.index('maturity') in idevphase:
-    #     it_mature = np.where(idevphase == Plant.PlantDev.phases.index('maturity'))[0][-1]    # Index for end of maturity phase
-    # elif Plant.Management.harvestDay is not None: 
-    #     it_mature = it_harvest    # Maturity developmental phase not completed, so take harvest as the end of growing season
-    # else:
-    #     it_mature = -1    # if there is no harvest day specified, we just take the last day of the simulation. 
-
-    # Filter out transitions that occur on or before the sowing day
-    # it_phase_transitions = [t for t in it_phase_transitions if time_axis[t] > time_axis[it_sowing+1]]
-    it_phase_transitions = [t for t in it_phase_transitions if t > int(it_sowing+1)]
-    # Filter out transitions that occur after the maturity or harvest day
-    # it_phase_transitions = [t for t in it_phase_transitions if time_axis[t] <= time_axis[it_mature]]
-    it_phase_transitions = [t for t in it_phase_transitions if t <= it_mature]
-
     # Developmental phase indexes
     igermination = Plant.PlantDev.phases.index("germination")
     ivegetative = Plant.PlantDev.phases.index("vegetative")
@@ -297,19 +254,27 @@ def run_model_and_get_outputs(Plant, ODEModelSolver, time_axis, forcing_inputs, 
     igrainfill = Plant.PlantDev.phases.index("grainfill")
     imaturity = Plant.PlantDev.phases.index("maturity")
 
-    ip = np.where(diagnostics['idevphase'][it_phase_transitions] == Plant.PlantDev.phases.index('vegetative'))[0][0]
-    tdoy_vegetative = time_axis[it_phase_transitions[ip]]   # ordinal day-of-year at transition point into vegetative phase
-    if Plant.PlantDev.phases.index('anthesis') in idevphase[it_sowing+1:it_harvest+1]:
-        ip = np.where(diagnostics['idevphase'][it_phase_transitions] == Plant.PlantDev.phases.index('anthesis'))[0][0]
-        tdoy_anth0 = time_axis[it_phase_transitions[ip]]   # ordinal day-of-year at transition point into anthesis phase
+    xdoy = np.floor(forcing_inputs[-2](time_axis))
+    xyear = np.array(forcing_inputs[-1](time_axis), dtype=int)
+    if ivegetative in diagnostics['idevphase_numeric'][itax_sowing+1:itax_harvest+1]:
+        ip = np.where(diagnostics['idevphase'][itax_phase_transitions] == Plant.PlantDev.phases.index('vegetative'))[0][0]
+        tdoy_vegetative = xdoy[itax_phase_transitions[ip]]
     else:
-        tdoy_anth0 = time_axis[it_harvest]
-    if Plant.PlantDev.phases.index('grainfill') in idevphase[it_sowing+1:it_harvest+1]:
-        ip = np.where(diagnostics['idevphase'][it_phase_transitions] == Plant.PlantDev.phases.index('grainfill'))[0][0]
-        tdoy_anth1 = time_axis[it_phase_transitions[ip]]   # ordinal day-of-year at transition point into grainfill stage (out of anthesis phase)
+        tdoy_anth0 = xdoy[itax_harvest]
+    
+    if ianthesis in diagnostics['idevphase_numeric'][itax_sowing+1:itax_harvest+1]:
+        ip = np.where(diagnostics['idevphase'][itax_phase_transitions] == Plant.PlantDev.phases.index('anthesis'))[0][0]
+        tdoy_anth0 = xdoy[itax_phase_transitions[ip]]
     else:
-        tdoy_anth1 = time_axis[it_harvest]
-    tdoy_harvest = time_axis[it_harvest]   # ordinal day-of-year at harvest
+        tdoy_anth0 = xdoy[itax_harvest]
+    
+    if igrainfill in diagnostics['idevphase_numeric'][itax_sowing+1:itax_harvest+1]:
+        ip = np.where(diagnostics['idevphase'][itax_phase_transitions] == Plant.PlantDev.phases.index('grainfill'))[0][0]
+        tdoy_anth1 = xdoy[itax_phase_transitions[ip]]
+    else:
+        tdoy_anth1 = xdoy[itax_harvest]
+
+    tdoy_harvest = xdoy[itax_harvest]
     
     # Model output (of observables) given the parameter vector p
     # - this is the model output that we compare to observations and use to calibrate the parameters
@@ -322,6 +287,7 @@ def run_model_and_get_outputs(Plant, ODEModelSolver, time_axis, forcing_inputs, 
 
     return M_p
 
+    
 def model_function(params, model_instance, input_data, param_info):
     # Update the model class with the new parameters
     # Plant.PlantDev.gdd_requirements = [params[ip_GDD_germ],params[ip_GDD_veg],params[ip_GDD_ant],params[ip_GDD_gf],params[ip_GDD_mat]]
@@ -431,11 +397,22 @@ input_data = [ODEModelSolver, ForcingDataX.time_axis, ForcingDataX.inputs, Forci
 param_bounds = list(zip(parameters.df["Min"].values, parameters.df["Max"].values))
 
 # Run the differential evolution algorithm
-result = differential_evolution(objective_function_wls, bounds=param_bounds, args=(y, U_y, PlantX, input_data, parameters.df), popsize=5, tol=0.05, maxiter=500)
+result = differential_evolution(objective_function_wls, bounds=param_bounds, args=(y, U_y, PlantX, input_data, parameters.df), popsize=5, tol=0.05, maxiter=500, workers=-1)
 
 # Display results
 print("Optimal Parameters:", result.x)
 print("Minimum Objective Function Value:", result.fun)
+
+# %%
+# result.x
+
+# %%
+it_sowing = np.where(ForcingDataX.time_axis == ForcingDataX.reset_days[0])[0][0]  #sowing_steps_itax[0]
+        
+if PlantX.Management.harvestDays is not None:
+    it_harvest = np.where(ForcingDataX.time_axis == ForcingDataX.reset_days[1])[0][0]  #harvest_steps_itax[0]   # np.where(np.floor(Climate_doy_f(time_axis)) == Plant.Management.harvestDay)[0][0]
+else:
+    it_harvest = -1   # if there is no harvest day specified, we just take the last day of the simulation. 
 
 # %% [markdown]
 # ### 7. Display optimised parameters and model-observed comparison
@@ -467,6 +444,9 @@ parameters.to_file("../parameters/PlantDevCalibrated.json")
 # %%
 PlantX.Management.sowingDays = parameters.df.loc[parameters.df['Name'] == 'sowingDays']['Optimised Value'].values
 PlantX.Management.harvestDays = parameters.df.loc[parameters.df['Name'] == 'harvestDays']['Optimised Value'].values
+
+# %%
+parameters.df
 
 # %%
 input_data = [ODEModelSolver, ForcingDataX.time_axis, ForcingDataX.inputs, ForcingDataX.reset_days, ForcingDataX.zero_crossing_indices, ForcingDataX.time_nday_f, ForcingDataX.time_doy_f, ForcingDataX.time_year_f]
@@ -567,8 +547,8 @@ experiment = Experiment(
     CLatDeg=SiteX.CLatDeg,
     CLonDeg=SiteX.CLonDeg,
     tz=SiteX.timezone,
-    sowing_dates=[Timestamp(year=2019,month=5,day=14)],
-    harvest_dates=[Timestamp(year=2019,month=11,day=17)],
+    sowing_dates=ForcingDataX.sowing_dates,
+    harvest_dates=ForcingDataX.harvest_dates,
     xsite="PlantDev_calib_test_run",
 )
 
@@ -585,33 +565,68 @@ model_output = update_and_run_model(
     parameters.df,
     parameters.problem)
 
+# %%
+## Create datetime array from doy and year outputs
+xyear = np.array(model_output[d_fd_mapping['Climate_year_f']], dtype=int)
+xdoy = model_output[d_fd_mapping['Climate_doy_f']]
+model_output['Date'] = pd.to_datetime(xyear.astype(str), format='%Y') + pd.to_timedelta(xdoy - 1, unit='D')
+
 # %% [markdown]
 # ## Plot Results
 
 # %%
 fig, axes = plt.subplots(5,1,figsize=(8,10),sharex=True)
 
-axes[0].plot(model_output['t'], model_output["LAI"])
+axes[0].plot(model_output['Date'], model_output["LAI"])
 axes[0].set_ylabel("LAI\n"+r"($\rm m^2 \; m^{-2}$)")
 axes[0].tick_params(axis='x', labelrotation=45)
 axes[0].annotate("Leaf area index", (0.01,0.93), xycoords='axes fraction', verticalalignment='top', horizontalalignment='left', fontsize=12)
 axes[0].set_ylim([0,6.5])
 
-axes[1].plot(model_output["t"], model_output["GPP"])
+axes[1].plot(model_output['Date'], model_output["GPP"])
 axes[1].set_ylabel("GPP\n"+r"($\rm g C \; m^{-2} \; d^{-1}$)")
 axes[1].tick_params(axis='x', labelrotation=45)
 axes[1].annotate("Photosynthesis", (0.01,0.93), xycoords='axes fraction', verticalalignment='top', horizontalalignment='left', fontsize=12)
 axes[1].set_ylim([0,30])
 
-axes[2].plot(model_output["t"], model_output["E_mmd"])
+axes[2].plot(model_output["Date"], model_output["E_mmd"])
 axes[2].set_ylabel(r"$\rm E$"+"\n"+r"($\rm mm \; d^{-1}$)")
 axes[2].tick_params(axis='x', labelrotation=45)
 axes[2].annotate("Transpiration Rate", (0.01,0.93), xycoords='axes fraction', verticalalignment='top', horizontalalignment='left', fontsize=12)
 axes[2].set_ylim([0,6])
 
-axes[3].plot(model_output["t"], model_output["Bio_time"])
+axes[3].plot(model_output["Date"], model_output["Bio_time"])
 axes[3].set_ylabel("Thermal Time\n"+r"($\rm ^{\circ}$C d)")
 axes[3].annotate("Growing Degree Days", (0.01,0.93), xycoords='axes fraction', verticalalignment='top', horizontalalignment='left', fontsize=12)
+
+xlimmin, xlimmax = experiment.sowing_dates[0], experiment.harvest_dates[0]
+axes[0].set_xlim([xlimmin, xlimmax])
+
+# Add annotations for developmental phases
+itax_sowing, itax_mature, itax_harvest, itax_phase_transitions = experiment.PlantX.Site.time_index_growing_season(experiment.ForcingDataX.time_index, model_output['idevphase_numeric'], experiment.PlantX.Management, experiment.PlantX.PlantDev, iseason=iseason)
+print(itax_sowing, itax_mature, itax_harvest, itax_phase_transitions)
+# for ax in axes:
+ax = axes[3]
+ylimmin, ylimmax = 0, ax.get_ylim()[1]
+for itime in itax_phase_transitions:
+    print(model_output['Date'][itime])
+    ax.vlines(x=model_output['Date'][itime], ymin=ylimmin, ymax=ylimmax, color='0.5',linestyle="--")
+    text_x = model_output['Date'][itime] + pd.Timedelta(days=1)
+    text_y = 0.5 * ylimmax
+    if (text_x < xlimmin) or (text_x > xlimmax):
+        continue
+    elif ~np.isnan(model_output['idevphase_numeric'][itime]):
+        # print(experiment.PlantX.PlantDev.phases)
+        # print(model_output['idevphase'][itime])
+        phase = experiment.PlantX.PlantDev.phases[int(model_output['idevphase'][itime])]
+        ax.text(text_x, text_y, phase, horizontalalignment='left', verticalalignment='center',
+                fontsize=8, alpha=0.7, rotation=90)
+    elif np.isnan(model_output['idevphase_numeric'][itime]):
+        phase = "mature"
+        ax.text(text_x, text_y, phase, horizontalalignment='left', verticalalignment='center',
+                fontsize=8, alpha=0.7, rotation=90)
+ax.set_ylim([ylimmin, ylimmax])
+
 
 alp = 0.6
 axes[4].plot(model_output["t"], model_output["Cleaf"]+model_output["Croot"]+model_output["Cstem"]+model_output["Cseed"],c='k',label="Plant", alpha=alp)
@@ -630,8 +645,4 @@ yield_from_seed_Cpool = model_output["Cseed"][itax_harvest]/100 * (1/experiment.
 axes[4].annotate("Yield = %1.2f t/ha" % (yield_from_seed_Cpool), (0.01,0.93), xycoords='axes fraction', verticalalignment='top', horizontalalignment='left', fontsize=12)
 axes[4].annotate("Harvest index = %1.2f" % (harvest_index_maturity), (0.01,0.81), xycoords='axes fraction', verticalalignment='top', horizontalalignment='left', fontsize=12)
 
-axes[0].set_xlim([experiment.PlantX.Management.sowingDays[0], model_output[d_fd_mapping['Climate_doy_f']][-1]])
-
 plt.tight_layout()
-
-# %%
