@@ -177,7 +177,7 @@ For a quick start a user must:
  * Provide forcing data
  * Run model
 
-An example is provided in `./notebooks/experiment_example.py`. 
+An example of how to create and modify an `Experiment` is provided in `./notebooks/experiment_example.py`. An example of how to run the model given an `Experiment` is provided in `./notebooks/model_run.py` (including example figures and saving outputs). 
 
 ### 3.2 Configuration-Based Run
 
