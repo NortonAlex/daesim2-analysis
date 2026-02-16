@@ -1,20 +1,269 @@
 # DAESIM2 Analysis
 
-## Description
-
-This Python package supports the development and testing of the Dynamic Agro-Ecosystem Simulator 2 (DAESIM2), a biophysical model for agro-ecosystems. The package provides tools for conducting sensitivity analysis, calibration, and uncertainty analysis, helping to evaluate and improve model performance.
+This Python package supports the development and testing of the Dynamic Agro-Ecosystem Simulator 2 (DAESIM2), a biophysical model for agro-ecosystems. The package provides tools to support simulations, sensitivity analysis, calibration, and uncertainty analysis, helping to test, evaluate and improve model performance.
 
 References: Taghikhah et al. (2022) https://doi.org/10.1016/j.ecolmodel.2022.109930
 
-## Installation
+## 1. Overview
 
-To install and run the DAESIM2 Analysis package on your local machine, you must download it, install it and then set up the environment. To download, click on the green "Code" button and follow your download method of choice. Alternatively, you can clone the repository from the command line with the following:
+### 1.1  What is DAESIM2?
+
+DAESIM2 is a modular, process-based biophysical model designed to simulate the growth, development, and resource dynamics of agro-ecosystems. Currently, the model represents plant physiological processes (e.g. photosynthesis, carbon allocation, phenological development, water uptake) in a mechanistic and extensible framework. 
+
+### 1.2 Design Philosophy
+
+The DAESIM2 analysis package (`daesim2-analysis`) is implemented in Python using an object-oriented architecture that separates:
+ * Core biophysical processes
+ * Parameter configuration
+ * Experiment design
+ * Forcing data handling
+ * Analysis workflows
+
+This separation ensures:
+ * Ease of use — the model can be run immediately using internally defined defaults.
+ * Configurability — parameters can be customised for specific sites, genotypes, plant functional types, or experimental designs.
+ * Scientific workflow integration — the architecture separates physics from experiment design and supports sensitivity analysis, calibration, optimisation, and ensemble experimentation. 
+
+## 2. Model Analysis Architecture
+
+### 2.1 Conceptual Architecture
+
+The `daesim2-analysis` architecture is structured into four conceptual layers:
+ * Biophysical modules (core process representations)
+ * Configuration (site / genotype / PFT definition)
+ * Parameter overrides (for calibration and experimentation)
+ * Experiment (model orchestration + forcing + I/O)
+
+This structure allows a new user to run the model quickly with minimal setup, while also allowing an advanced user to precisely control parameter sets and experiment design. This also enables clean integration with scientific tools such as sensitivity analyses packages (e.g. SALib) or optimization tools (e.g. MCMC frameworks, SciPy's `optimize` package). It also provides a relatively robust framework with which to scale the model e.g. run across multiple sites in parallel. 
+
+Another benefit of this architecture is that it separates core process physics from experiment design. This allows different versions structures of the `DAESIM2` model to be used within the same analysis framework. 
+
+### 2.2 Biophysical Modules
+
+The DAESIM2 biophysical model source code is maintained in a separate repository: [DAESIM2](https://github.com/NortonAlex/DAESIM). 
+
+The `daesim2-analysis` repository provides the experimental and analytical framework that interfaces with the underlying model, but does not define the process-level physics itself. It serves as the primary entry point for configuring, running, analysing, and calibrating the model
+
+Each biophysical process in `DAESIM2` is implemented as a dedicated Python class (module). Within each module:
+
+ * The mathematical formulation of a biological or physical process.
+ * Its associated parameters, defined as class attributes with default values.
+
+These class attributes define the model’s default parameter values. This is an important concept as we consider a "model" to be the combination of mathematical formulations and the coefficients used within them. By embedding default parameters within the biophysical modules, `DAESIM2` makes this relationship transparent. 
+
+### 2.3 Parameter Hierarchy
+
+Parameterization follows a hierarchical override system:
+```sh
+Default class attributes
+        ↓
+Configuration file
+        ↓
+Parameters object
+```
+Later layers override earlier ones.
+
+This structure allows:
+ * Quick default runs (no configuration required)
+ * Site/genotype-specific setups
+ * Clean integration with sensitivity and optimisation frameworks
+
+#### 2.3.1 Default Parameters (Defined in Model Code)
+
+Each `DAESIM2` module is implemented as a Python class. Default parameters are defined directly in the class definition as class attributes. For example:
+
+```sh
+from dataclasses import dataclass
+from typing import List
+
+@dataclass
+class ManagementModule:
+    cropType: str = "Wheat"
+    sowingDays: List[int] = (120,)
+    harvestDays: List[int] = (330,)
+```
+
+These class attributes define the model's default parameter values. These defaults ensure the model can run without external configuration and that the code remains self-contained and transparent. Additionally, this means parameters are documented alongside the physics or biology they govern, making it much easier for testing (e.g. unit tests). 
+
+From the `daesim2-analysis` package, users can inspect these defaults by importing the relevant `DAESIM2` module and examining its class attributes.
+
+This is the base parameter layer. 
+
+#### 2.3.2 Configuration File (Site / Genotype / PFT)
+
+A configuration file allows a user to customise model parameters for e.g: 
+ * A specific site (e.g. lat/lon, soil properties)
+ * A genotype or functional type (e.g. physiological, developmental or structural traits)
+ * A scenario or study (e.g. any combination of the above)
+
+The configuration file is typically a JSON file with a nested dictionary structure.
+
+```sh
+{
+  "management.ManagementModule": {
+  	"sowingDays": (130,),
+  	"harvestDays": (340,),
+  }
+  "plantgrowthphases.PlantGrowthPhases": {
+    "GDD_emerg": 75.0,
+    "GDD_flowering": 820.0,
+  },
+  "canopy.CanopyLayers": {
+    "nlevmlcan": 3,
+  },
+}
+```
+
+**How it works**
+
+ * The top-level key identifies the module using its full import path.
+ * The nested dictionary contains:
+   * attribute: value pairs
+   * These map directly to class attributes.
+
+Internally, the configuration loader instantiates the model modules, updates matching class attributes, and leaves unspecified attributes at their defaults. 
+
+#### 2.3.3 The `Parameters` Object (Sampling / Calibration / Sensitivity)
+
+The `Parameters` object provides a lightweight, flat interface for:
+
+ * Sensitivity analysis (e.g. SALib)
+ * Parameter optimisation (e.g. scipy.optimize)
+ * MCMC / uncertainty analysis
+ * Ensemble experiments
+
+This layer overrides both:
+
+ * Defaults
+ * Configuration file values
+
+In addition to parameter values, the `Parameters` object stores additional data and metadata such as parameter initial values, minimum and maximum bounds. This supports direct integration with with optimisation and sampling frameworks that require parameter vectors and constraints. Future extensions may include data such as probability distribution types (e.g. normal, log-normal, uniform) to support probabilistic sampling and Bayesian calibration workflows. 
+
+**Why this layer exists**
+
+Optimisation and sensitivity frameworks typically require:
+
+ * Flat parameter vectors
+ * Simple name → value mappings
+ * Easy conversion between dict and array
+
+The `Parameters` object provides exactly that. 
+
+A common use case for this could be: A user wants to configure their model to a field trial site and assign some known plant type attributes (e.g. flowing time, crop height). Then, they want calibrate other model parameters against field trial data. In this case, they can create a configuration file specific to that site and then use the `Parameters` object to specify the parameters they want to calibrate.
+
+Example structure:
+
+```sh
+parameters = Parameters(
+        paths           = ["PlantCH2O.CanopyGasExchange.Leaf", "PlantCH2O", "PlantCH2O", "PlantDev", "PlantDev"],
+        modules         = ["Leaf", "PlantCH2O", "PlantCH2O", "PlantDev", "PlantDev"],
+        names           = ["Vcmax_opt", "SLA", "maxLAI", "gdd_requirements", "gdd_requirements"],
+        units           = ["mol CO2 m-2 s-1", "m2 g d.wt-1", "m2 m-2", "deg C d", "deg C d"],
+        init            = [60e-6, 0.03, 6, 900, 650],
+        min             = [30e-6, 0.015, 5, 600, 350],
+        max             = [120e-6, 0.035, 7, 1800, 700],
+        phase_specific  = [False, False, False, True, True],
+        phase           = [None, None, None, "vegetative", "grainfill"]
+    )
+```
+
+## 3. Running DAESIM2
+
+### 3.1 Quick Start (Minimal Example)
+
+For a quick start a user must:
+
+ * Instantiate Experiment
+ * Provide forcing data
+ * Run model
+
+An example is provided in `./notebooks/experiment_example.py`. 
+
+### 3.2 Configuration-Based Run
+
+You can copy and modify the example provided in `./notebooks/experiment_example.py`. You may like to provide your own forcing data and a customised configuration (either directly in-line or with a JSON file). 
+
+### 3.3 Calibration/Sensitivity Analysis
+
+Discuss with developers. 
+
+## 4. The Experiment Class
+
+The `Experiment` class is the high-level orchestrator of `daesim2-analysis`. It brings together:
+
+ * The biophysical model modules
+ * Configuration and parameterization
+ * Forcing data
+ * Model integration and I/O
+
+Conceptually:
+
+```sh
+Experiment
+ ├── Loads configuration
+ ├── Applies parameter overrides
+ ├── Loads forcing data
+ ├── Instantiates model
+ ├── Runs simulation
+ └── Handles outputs
+```
+
+### Creating an Experiment
+
+An Experiment typically requires:
+
+ * Forcing data (e.g. meteorological drivers)
+ * A configuration file (optional but recommended)
+ * Optional `Parameters` object (for calibration or experiments)
+
+There are some examples at the bottom of this page. 
+
+### Inputs
+| Argument        | Type                                         | Default                                                       | Description                                                             |
+|-----------------|----------------------------------------------|---------------------------------------------------------------|-------------------------------------------------------------------------|
+| `xsite`         | `str`                                        | `'Milgadara_2018'`                                            | Unique site/run identifier (used in output folders).                   |
+| `CLatDeg`       | `float`                                      | `-36.05`                                                      | Site latitude in decimal degrees.                                       |
+| `CLonDeg`       | `float`                                      | `146.5`                                                       | Site longitude in decimal degrees.                                      |
+| `tz`            | `int`                                        | `10`                                                          | Time zone offset from UTC (e.g., 10 for Australia/Sydney).              |
+| `crop_type`     | `str`                                        | `'Wheat'`                                                     | Crop species or variety identifier.                                     |
+| `sowing_dates`  | `List[date]`                                 | `[date(2018,1,1)]`                                            | List of sowing dates.                                                   |
+| `harvest_dates` | `List[date]`                                 | `[date(2018,12,31)]`                                          | List of harvest dates.                                                  |
+| `n_processes`   | `int`                                        | `1`                                                           | Number of parallel worker processes.                                    |
+| `n_samples`     | `int`                                        | `100`                                                         | Number of parameter samples for FAST.                                    |
+| `dir_results`   | `str`                                        | `'DAESIM_data/FAST_results'`                                  | Base directory for storing results.                                     |
+| `df_forcing`    | `List[str]` or `DataFrame`                   | `['.../DAESim_forcing_Milgadara_2018.csv']`                  | Forcing CSV paths or pre-loaded DataFrame.                              |
+| `parameters`    | `str` or `Parameters`                        | `'parameters/Fast1.json'`                                     | Path or object for SALib parameter definitions.                         |
+| `daesim_config` | `str` or `DAESIMConfig`                      | `'daesim_configs/daesim_config1.json'`                        | Path or object for DAESIM module argument defaults.                     |
+
+### Initialization Sequence
+1. **Load forcing data**: If `df_forcing` is a path (or list of paths), it is read into a pandas `DataFrame`.
+2. **Setup output structure**: Creates `dir_results/{xsite}/parameters` and defines `path_Mpx`.
+3. **Convert dates**: Converts `sowing_dates` and `harvest_dates` into `pandas.Timestamp`.
+4. **Load configs**:
+   - `Parameters` via `Parameters.__from_file__` if a filepath is given.
+   - `DAESIMConfig` via `DAESIMConfig.from_json_dict` if a filepath is given.
+5. **Instantiate DAESIM modules** in module dependency order. For example:
+   ```sh
+   SiteX → ForcingDataX → ManagementX → PlantDevX → BoundaryLayerX →
+   LeafX → CanopyX → CanopyRadX → CanopyGasExchangeX → SoilLayersX →
+   PlantCH2OX → PlantAllocX → PlantX (PlantModuleCalculator)
+   ```
+
+6. Setup solver: Wraps PlantX.calculate in ODEModelSolver, setting Model and assembling input_data.
+
+
+
+## 5. Installation
+
+To install and run the `daesim2-analysis` package on your local machine, you must download it, install it and then set up the environment. To download, click on the green "Code" button and follow your download method of choice. Alternatively, you can clone the repository from the command line with the following:
 
 ```sh
 git clone https://github.com/NortonAlex/daesim2_analysis.git
 ```
 
 Then, change into the newly created directory with `cd daesim2-analysis`. 
+
+### 5.1 Using Conda (Recommended)
 
 Before proceeding further, ensure you have the necessary dependencies. For Mac and Linux users:
 
@@ -52,11 +301,11 @@ Once you're finished, you can deactivate the conda environment with the command:
 conda deactivate
 ```
 
-### Installation - Without Anaconda:
+### 5.2 Installation Without Conda
 
 In some environments, Anaconda (conda) may not be available for managing Python environments. This is often the case on high-performance computing (HPC) systems such as NCI's Gadi, where Python environments must be manually configured using system modules and pip.
 
-The following instructions outline how to install and run the DAESIM2 Analysis package using a Python virtual environment (venv) instead of Anaconda. First, you must load the required python module. At the time of writing, the required version is Python 3.9.2. On NCI's Gadi, load the correct module with: 
+The following instructions outline how to install and run the `daesim2-analysis` package using a Python virtual environment (venv) instead of Anaconda. First, you must load the required python module. At the time of writing, the required version is Python 3.9.2. On NCI's Gadi, load the correct module with: 
 
 ```sh
 module load python3/3.9.2
@@ -110,7 +359,7 @@ With the virtual environment activated, install the required dependencies listed
 pip install -r requirements.txt
 ```
 
-Finally, to install daesim2-analysis as an editable package (allowing for easy development and updates), run: 
+Finally, to install `daesim2-analysis` as an editable package (allowing for easy development and updates), run: 
 
 ```sh
 pip install -e .
@@ -130,26 +379,26 @@ Once you're finished, you can deactivate the venv with the command:
 deactivate
 ```
 
-### Linking to the DAESIM2 GitHub repository
+### 5.3 Linking to the DAESIM2 GitHub repository
 
 This repository is linked to the DAESIM2 biophysical model source code [DAESIM2](https://github.com/NortonAlex/DAESIM). The analysis tools are kept separate from the biophysical model code for better organization and maintainability. Keeping them independent prevents unnecessary complexity in the model codebase and ensures that the analysis tools can evolve separately without impacting core model functionality.
 
 This separation benefits both model users and developers:
 
-* Users can run and interact with the DAESIM2 model without needing to understand or install additional analysis tools (including their specialized Python libraries).
+* Users can run and interact with the `DAESIM2` model without needing to understand or install additional analysis tools (including their specialized Python libraries).
 
-* Developers can work on analysis tasks (e.g., calibration, sensitivity analysis, uncertainty analysis) without interfering with the core model implementation, also allowing for a stable reference to DAESIM2 model versions.
+* Developers can work on analysis tasks (e.g., calibration, sensitivity analysis, uncertainty analysis) without interfering with the core model implementation, also allowing for a stable reference to `DAESIM2` model versions.
 
 
-#### Updating the Environment and Dependencies
+#### 5.3.1 Updating the Environment and Dependencies
 
-If the DAESIM2 biophysical model (linked via GitHub) has been updated or if you want to reference a difference version of the model, the following steps must be followed to ensure those changes are properly integrated into `daesim2-analysis`:
+If the `DAESIM2` biophysical model (linked via GitHub) has been updated or if you want to reference a difference version of the model, the following steps must be followed to ensure those changes are properly integrated into `daesim2-analysis`:
 
 1. Get [DAESIM2](https://github.com/NortonAlex/DAESIM) commit hash
 
-	Note the GitHub commit hash of the DAESIM2 version that you want to integrate
+	Note the GitHub commit hash of the `DAESIM2` version that you want to integrate
 
-2. Update the dependencies in daesim2-analysis
+2. Update the dependencies in `daesim2-analysis`
 
 	2.1 Update `environment.yml`
 
@@ -321,46 +570,7 @@ https://www.educative.io/answers/what-is-self-in-python
 - Git
 - Anaconda (or Miniconda)
 
-## Experiment
-
-
-The `Experiment` class ties together configuration, data loading, model setup, and sensitivity analysis. Below is a concise overview:
-
-### Inputs
-| Argument        | Type                                         | Default                                                       | Description                                                             |
-|-----------------|----------------------------------------------|---------------------------------------------------------------|-------------------------------------------------------------------------|
-| `xsite`         | `str`                                        | `'Milgadara_2018'`                                            | Unique site/run identifier (used in output folders).                   |
-| `CLatDeg`       | `float`                                      | `-36.05`                                                      | Site latitude in decimal degrees.                                       |
-| `CLonDeg`       | `float`                                      | `146.5`                                                       | Site longitude in decimal degrees.                                      |
-| `tz`            | `int`                                        | `10`                                                          | Time zone offset from UTC (e.g., 10 for Australia/Sydney).              |
-| `crop_type`     | `str`                                        | `'Wheat'`                                                     | Crop species or variety identifier.                                     |
-| `sowing_dates`  | `List[date]`                                 | `[date(2018,1,1)]`                                            | List of sowing dates.                                                   |
-| `harvest_dates` | `List[date]`                                 | `[date(2018,12,31)]`                                          | List of harvest dates.                                                  |
-| `n_processes`   | `int`                                        | `1`                                                           | Number of parallel worker processes.                                    |
-| `n_samples`     | `int`                                        | `100`                                                         | Number of parameter samples for FAST.                                    |
-| `dir_results`   | `str`                                        | `'DAESIM_data/FAST_results'`                                  | Base directory for storing results.                                     |
-| `df_forcing`    | `List[str]` or `DataFrame`                   | `['.../DAESim_forcing_Milgadara_2018.csv']`                  | Forcing CSV paths or pre-loaded DataFrame.                              |
-| `parameters`    | `str` or `Parameters`                        | `'parameters/Fast1.json'`                                     | Path or object for SALib parameter definitions.                         |
-| `daesim_config` | `str` or `DAESIMConfig`                      | `'daesim_configs/daesim_config1.json'`                        | Path or object for DAESIM module argument defaults.                     |
-
-### Initialization Sequence
-1. **Load forcing data**: If `df_forcing` is a path (or list of paths), it is read into a pandas `DataFrame`.
-2. **Setup output structure**: Creates `dir_results/{xsite}/parameters` and defines `path_Mpx`.
-3. **Convert dates**: Converts `sowing_dates` and `harvest_dates` into `pandas.Timestamp`.
-4. **Load configs**:
-   - `Parameters` via `Parameters.__from_file__` if a filepath is given.
-   - `DAESIMConfig` via `DAESIMConfig.from_json_dict` if a filepath is given.
-5. **Instantiate DAESIM modules** in dependency order:
-   ```python
-   SiteX → ForcingDataX → ManagementX → PlantDevX → BoundaryLayerX →
-   LeafX → CanopyX → CanopyRadX → CanopyGasExchangeX → SoilLayersX →
-   PlantCH2OX → PlantAllocX → PlantX (PlantModuleCalculator)
-
-6. Setup solver: Wraps PlantX.calculate in ODEModelSolver, setting Model and assembling input_data.
-
-### Examples
-
-## Examples
+## Experiment Examples
 
 ### 1. Using JSON configs + CLI
 ```bash
