@@ -124,8 +124,6 @@ class Parameters:
         lens = list(self._column_lengths().values())
         return mean(lens) if lens else 0.0
 
-    def sample(s: Self, n: int, seed: int = 0): return fast_sampler.sample(s.problem, n, seed=seed)
-
     def sample(
         s: Self,
         n: int,
