@@ -1,3 +1,4 @@
+# %%
 import numpy as np
 ## DAESIM2
 from daesim.climate import *
@@ -18,9 +19,10 @@ from multiprocessing import Pool
 from typing import Optional
 from typing import List
 from os import makedirs
-from tqdm import tqdm
+# from tqdm import tqdm
 from time import time
 from functools import partial
+from pandas import Timestamp
 
 from daesim2_analysis.experiment import Experiment
 from daesim2_analysis.experiment import is_interactive
@@ -28,11 +30,29 @@ from daesim2_analysis.parameters import Parameters
 from daesim2_analysis.utils import *
 from daesim2_analysis.forcing_data import ForcingData
 
-experiment = Experiment.from_cli() if not is_interactive() else Experiment()
+# experiment = Experiment.from_cli() if not is_interactive() else Experiment()
+
+# %%
+experiment = Experiment(
+    df_forcing="../DAESIM_data/DAESim_forcing_data/Rutherglen_1971-1972_wheat_exp.csv",
+    parameters="../parameters/paramsRutherglen1971.json",
+    daesim_config="../daesim_configs/DAESIM_site_Rutherglen_exp.json",
+    dir_results="../results/",
+    df_forcing_type='3',
+    CLatDeg=-36.05,
+    CLonDeg=146.50,
+    sowing_dates=[Timestamp(year=1971,month=5,day=11), Timestamp(year=1972,month=5,day=19)],
+    harvest_dates=[Timestamp(year=1971,month=12,day=23), Timestamp(year=1972,month=12,day=13)],
+    xsite="Rutherglen1971-72",
+    n_samples=100,
+)
+
 
 # %%
 parameters: Parameters = experiment.parameters
-param_values = parameters.sample(experiment.n_samples)
+param_values = parameters.sample(n=experiment.n_samples, method="fast")
+
+# %%
 
 # %%
 Mpx = []

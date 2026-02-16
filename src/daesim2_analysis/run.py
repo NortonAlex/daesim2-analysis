@@ -2,7 +2,7 @@
 Analysis helper functions to support DAESIM2 analysis, sensitivity, calibration, etc.
 """
 
-from typing import Any
+from typing import Any, Callable, Optional
 from netCDF4 import date2num, Dataset
 from datetime import datetime, timedelta
 import time
@@ -142,7 +142,15 @@ def update_attribute_in_phase(obj: Any, path: str, new_value: Any, phase: str) -
     # Set the new phase value list to the last attribute in the path
     setattr(obj, attributes[-1], new_phase_values)
 
-def update_and_run_model(param_values, model_instance, input_data, param_info, salib_problem):
+def update_and_run_model(
+    param_values, 
+    model_instance, 
+    input_data, 
+    param_info, 
+    salib_problem,
+    *,
+    run_fn: Callable[..., Any] = None,
+    ):
     """
     Updates model parameters, runs the biophysical model, and returns the outputs.
 
@@ -211,7 +219,11 @@ def update_and_run_model(param_values, model_instance, input_data, param_info, s
             reset_days = [sowing_nday[0], harvest_nday[0]]
 
     # Run the model and get the outputs
-    model_outputs = run_model_and_get_outputs(
+    # - Choose default run function if not provided 
+    if run_fn is None:
+        run_fn = run_model_and_get_outputs
+    
+    model_outputs = run_fn(
         model_instance, ODEModelSolver, time_axis, forcing_inputs, reset_days, zero_crossing_indices
     )
 
