@@ -1,4 +1,4 @@
-from SALib.sample import fast_sampler
+from SALib.sample import fast_sampler, latin
 from typing_extensions import Union
 from typing_extensions import Self
 from typing_extensions import Optional
@@ -8,6 +8,7 @@ from dataclasses import field
 from pandas import DataFrame
 from hashlib import sha256
 import json
+import numpy as np
 
 @dataclass(frozen=True)
 class Parameters:
@@ -124,6 +125,99 @@ class Parameters:
         return mean(lens) if lens else 0.0
 
     def sample(s: Self, n: int, seed: int = 0): return fast_sampler.sample(s.problem, n, seed=seed)
+
+    def sample(
+        s: Self,
+        n: int,
+        seed: int = 0,
+        method: str = "fast",
+        force_n_times_np: bool = True,
+        **kwargs,
+        ):
+        """
+        Generate parameter samples using different designs (FAST, LHS, random).
+
+        Parameters
+        ----------
+        problem : dict
+            SALib 'problem' dict with keys:
+            - 'num_vars': int
+            - 'names': list[str]
+            - 'bounds': list[(float, float)]
+        n : int
+            Base sample size. By default, the function returns an array with
+            shape (n * np, np), where np = num_vars (matching FAST behaviour).
+        method : {'fast', 'lhs', 'random'}, default 'fast'
+            Sampling design to use:
+            - 'fast': SALib FAST sampler (SALib.sample.fast_sampler)
+            - 'lhs' : Latin Hypercube (SALib.sample.latin)
+            - 'random': simple uniform random sampling in bounds
+        seed : int or None, optional
+            Random seed for reproducibility (passed to samplers where supported).
+        force_n_times_np : bool, default True
+            If True, always return N_total = n * num_vars rows, for
+            consistency across methods (so your downstream code can assume
+            shape (n * np, np)). If False, pass N = n straight through to
+            each sampler and accept whatever sample size they produce.
+        **kwargs :
+            Extra keyword arguments forwarded to the underlying SALib sampler.
+
+        Returns
+        -------
+        samples : np.ndarray
+            Array of samples with shape (N_total, num_vars).
+        """
+        D = s.problem["num_vars"]  # number of parameters
+        bounds = np.array(s.problem["bounds"], dtype=float)  # shape (D, 2)
+
+        # Decide how many rows to request
+        if force_n_times_np:
+            N_total = n * D
+        else:
+            N_total = n
+
+        # SALib's FAST sampler uses 'N' as a base sample size and returns (N*D, D)
+        # so we set N_base such that N_base * D = N_total
+        if method == "fast":
+            # ensure N_total is divisible by D
+            if N_total % D != 0:
+                raise ValueError(
+                    f"For FAST, N_total (= n * num_vars = {N_total}) "
+                    f"must be divisible by num_vars (={D}). "
+                    f"Try a different 'n' or set force_n_times_np=False."
+                )
+            N_base = N_total // D
+
+            # FAST does not natively take a seed; any extra kwargs passed through
+            samples = fast_sampler.sample(s.problem, N_base, **kwargs)
+            # samples is (N_base * D, D) == (N_total, D)
+
+        elif method == "lhs":
+            # SALib Latin sampler: latin.sample(s.problem, N) -> (N, D)
+            # It supports seed via kwargs in recent SALib versions
+            if seed is not None:
+                kwargs.setdefault("seed", seed)
+
+            samples = latin.sample(s.problem, N_total, **kwargs)
+
+        elif method == "random":
+            # Simple uniform random sampling between bounds
+            rng = np.random.default_rng(seed)
+            u = rng.random((N_total, D))
+            low = bounds[:, 0]
+            high = bounds[:, 1]
+            samples = low + u * (high - low)
+
+        else:
+            raise ValueError(f"Unknown sampling method: {method!r}")
+
+        # Final sanity check on shape
+        if samples.shape != (N_total, D):
+            raise RuntimeError(
+                f"Unexpected sample shape {samples.shape}, expected {(N_total, D)}"
+            )
+
+        return samples
 
     # --- Export helpers ---
     def to_dataframe(self) -> DataFrame:
