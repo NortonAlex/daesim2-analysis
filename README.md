@@ -276,10 +276,7 @@ git checkout -b local-source origin/local-source
 # Activate your environment
 conda activate daesim2-analysis
 
-[remove]# Call make (just in case, you don't always have to do this)
-# make conda-environment
-
-# If any dependencies have changed, update your conda environment
+# If any DAESIM2 dependencies have changed, update your conda environment
 conda env update --file environment.yml --prune
 
 # Checkout (create) your own branch in case you want to make any commits
@@ -288,7 +285,7 @@ git checkout -b test-notebook-an
 
 # You're now ready to work
 # E.g. by starting a notebook server and looking at the notebooks
-jupyter notebook
+jupyter-lab
 ```
 
 ## Reading and viewing
@@ -301,26 +298,17 @@ https://www.educative.io/answers/what-is-self-in-python
 
 ### General approach to coding
 
-- [Clean Code](https://thixalongmy.haugiang.gov.vn/media/1175/clean_code.pdf) (buying the book is also a good option)
-- [Refactoring](http://silab.fon.bg.ac.rs/wp-content/uploads/2016/10/Refactoring-Improving-the-Design-of-Existing-Code-Addison-Wesley-Professional-1999.pdf) (buying the book is also a good option)
-- [Refactoring guru](refactoring.guru), incredible resource for understanding coding patterns and how to make them better (There is also a book, could be worth investing in)
-- [End of object inheritance](https://www.youtube.com/watch?v=3MNVP9-hglc) This one is hard to explain and understand until you start writing lots of code, but its worth watching (and re-watching) to understand the coding style you see in new climate models (e.g. MAGICC)
-- [End of object inheritance](https://www.youtube.com/watch?v=3MNVP9-hglc) This one is hard to explain and understand until you start writing lots of code, but its worth watching (and re-watching) to understand the coding style you see in new climate models (e.g. MAGICC)
-- [Composition over inheritance](https://www.youtube.com/watch?v=0mcP8ZpUR38) A nice explainer to see the principles of the above in practice
-- [Dependency injection vs. inversion](https://www.youtube.com/watch?v=2ejbLVkCndI) A further explainer to see the above in practice
+- [Clean Code](https://thixalongmy.haugiang.gov.vn/media/1175/clean_code.pdf)
+- [Refactoring](http://silab.fon.bg.ac.rs/wp-content/uploads/2016/10/Refactoring-Improving-the-Design-of-Existing-Code-Addison-Wesley-Professional-1999.pdf)
+- [Refactoring guru](refactoring.guru) resource for understanding coding patterns and how to make them better
 
 ### Scientific software
 
-- [Research software engineering with Python](https://merely-useful.tech/py-rse/) A little bit out of date, but a good resource for general practice and examples of developing software with python
+- [Research software engineering with Python](https://merely-useful.tech/py-rse/) A good resource for general practice and examples of developing software with Python
 
 ### Numerical coding
 
-- [Numerical recipes](http://numerical.recipes/book/book.html) (buying the book is also a good option)
-
-### Big climate model output and handling netCDF files
-
-- [Software Carpentry's introduction to Python for atmosphere and ocean scientists](https://carpentries-lab.github.io/python-aos-lesson/), particularly if you think you're going to be working with netCDF files
-- [CMIP6 in the cloud](https://medium.com/pangeo/cmip6-in-the-cloud-five-ways-96b177abe396), particularly if you're going to be dealing with CMIP data a lot (although speak with someone about how far you need to go, it's unlikely that every step will be relevant)
+- [Numerical recipes](http://numerical.recipes/book/book.html)
 
 ### Miscellaneous
 
@@ -331,11 +319,7 @@ https://www.educative.io/answers/what-is-self-in-python
 - An IDE (e.g. pycharm) or more light-weight editor (e.g. Sublime)
 - If on Mac, homebrew
 - Git
-- Make
-- Slack
-- gfortran
-- cmake
-
+- Anaconda (or Miniconda)
 
 ## Experiment
 
