@@ -13,6 +13,7 @@
 # ---
 
 # %%
+from typing import Any, Callable, Optional
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
@@ -285,10 +286,15 @@ def run_model_and_get_outputs(Plant, ODEModelSolver, time_axis, forcing_inputs, 
         tdoy_harvest,
     ])
 
-    return M_p
+    diagnostics = None
+
+    return {
+        "metrics": M_p,              # 1D np.array
+        "diagnostics": diagnostics   # dict[str, time-series]
+    }
 
     
-def model_function(params, model_instance, input_data, param_info):
+def model_function(params, model_instance, input_data, param_info, *, run_fn: Callable[..., Any] = None):
     # Update the model class with the new parameters
     # Plant.PlantDev.gdd_requirements = [params[ip_GDD_germ],params[ip_GDD_veg],params[ip_GDD_ant],params[ip_GDD_gf],params[ip_GDD_mat]]
     # Plant.Management.sowingDay = params[ip_sowingDay]
@@ -327,10 +333,19 @@ def model_function(params, model_instance, input_data, param_info):
             
             # Set reset_days to be the updated sowing and harvest nday
             reset_days = [sowing_nday[0], harvest_nday[0]]
-     
-    model_output = run_model_and_get_outputs(model_instance, ODEModelSolver, time_axis, forcing_inputs, reset_days, zero_crossing_indices)
 
-    return model_output
+    # Run the model and get the outputs
+    # - Choose default run function if not provided 
+    if run_fn is None:
+        run_fn = run_model_and_get_outputs
+    
+    out = run_fn(model_instance, ODEModelSolver, time_axis, forcing_inputs, reset_days, zero_crossing_indices)
+
+    # Fail fast if a custom runner breaks the expected output object structure
+    if not isinstance(out, dict) or "metrics" not in out or "diagnostics" not in out:
+        raise TypeError("run_fn must return a dict with keys: 'metrics' and 'diagnostics'")
+
+    return out
 
 # Define an objective function to minimize
 def objective_function_mse(params, observations, Plant, input_data, param_info):
@@ -344,8 +359,9 @@ def objective_function_mse(params, observations, Plant, input_data, param_info):
     int_params = np.round(params).astype(int)
     # Calculate model outputs
     model_outputs = model_function(int_params, Plant, input_data, param_info)
+    metrics = model_outputs['metrics']
     # Calculate the error (e.g., mean squared error) TODO: Include model-obs uncertainties here too
-    error = np.mean((model_outputs - observations) ** 2)
+    error = np.mean((metrics - observations) ** 2)
     return error
 
 # Define an objective function to minimize
@@ -367,10 +383,11 @@ def objective_function_wls(params, observations, observation_unc_sigma, Plant, i
     int_params = np.round(params).astype(int)
     # Calculate model outputs
     model_outputs = model_function(int_params, Plant, input_data, param_info)
+    metrics = model_outputs['metrics']
     # Calculate the error as the weighted Least Squares: 
     # 
     # Error is the model - observed difference squared, normalised by the uncertainty (as a variance), and summed over all obs
-    error = np.mean( ((model_outputs - observations) ** 2) / (observation_unc_sigma**2))
+    error = np.mean( ((metrics - observations) ** 2) / (observation_unc_sigma**2))
     print(f"Current error: {error}")
     return error
 
@@ -452,10 +469,12 @@ parameters.df
 input_data = [ODEModelSolver, ForcingDataX.time_axis, ForcingDataX.inputs, ForcingDataX.reset_days, ForcingDataX.zero_crossing_indices, ForcingDataX.time_nday_f, ForcingDataX.time_doy_f, ForcingDataX.time_year_f]
 
 ## Run with optimised parameters
-M_x = model_function(optimised_parameters, PlantX, input_data, parameters.df)
+model_outputs = model_function(optimised_parameters, PlantX, input_data, parameters.df)
+M_x = model_outputs['metrics']
 
 ## Run with initial values for comparison
-M_x0 = model_function(parameters.df["Initial Value"].values, PlantX, input_data, parameters.df)
+model_outputs0 = model_function(parameters.df["Initial Value"].values, PlantX, input_data, parameters.df)
+M_x0 = model_outputs0['metrics']
 
 # %%
 fig, axes = plt.subplots(1,1,figsize=(4,3))

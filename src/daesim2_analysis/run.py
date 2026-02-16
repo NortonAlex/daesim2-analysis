@@ -97,7 +97,15 @@ def run_model_and_get_outputs(Plant, ODEModelSolver, time_axis, forcing_inputs, 
                 fstr = f"forcing {ni:02} z{iz}"
                 diagnostics[fstr] = f(time_axis)[:,iz]
 
-    return diagnostics
+    # No metrics defined for the default run model and get outputs case:
+    # 'metrics' should be used to define scalar or small vector summaries which are
+    # often objective function values used for optimisation or sensitivity analyses
+    metrics = None
+
+    return {
+        "metrics": metrics,
+        "diagnostics": diagnostics,
+    }
 
 def update_attribute(obj: Any, path: str, new_value: Any) -> None:
     """
@@ -223,8 +231,12 @@ def update_and_run_model(
     if run_fn is None:
         run_fn = run_model_and_get_outputs
     
-    model_outputs = run_fn(
+    out = run_fn(
         model_instance, ODEModelSolver, time_axis, forcing_inputs, reset_days, zero_crossing_indices
     )
 
-    return model_outputs
+    # Fail fast if a custom runner breaks the expected output object structure
+    if not isinstance(out, dict) or "metrics" not in out or "diagnostics" not in out:
+        raise TypeError("run_fn must return a dict with keys: 'metrics' and 'diagnostics'")
+
+    return out

@@ -1,17 +1,16 @@
 # %%
 import numpy as np
 import pandas as pd
+
 ## DAESIM2
 from daesim.climate import *
 from daesim.utils import ODEModelSolver
 from daesim.utils import daesim_io_write_diag_to_nc
-## DAESIM2 Analysis
-# from daesim2_analysis import fast_sensitivity as fastsa
-# from SALib.sample import fast_sampler
-# from SALib.analyze import fast
+
 ## Argument Parsing
 import __main__
 from argparse import ArgumentParser
+
 ## Parallelisation
 from typing_extensions import Callable
 from typing_extensions import Self
@@ -20,11 +19,11 @@ from multiprocessing import Pool
 from typing import Optional
 from typing import List
 from os import makedirs
-# from tqdm import tqdm
 from time import time
 from functools import partial
 from pandas import Timestamp
 
+## daesim2-analysis
 from daesim2_analysis.experiment import Experiment
 from daesim2_analysis.experiment import is_interactive
 from daesim2_analysis.parameters import Parameters
@@ -70,7 +69,9 @@ param_values = parameters.sample(n=experiment.n_samples, method="lhs") #, seed=1
 #experiment.PlantX.PlantCH2O.root_scale_vcmax = True
 
 # %% [markdown]
-# ### Customized version of `run_model_and_get_outputs` compared to the standard function defined in `run.py`
+# ### Customized version of `run_model_and_get_outputs` (distinct from the standard function defined in `run.py`)
+#
+# This allows you to customize the post-processing of standard model output so that you can output other metrics (e.g. objective function values) or diagnostics. 
 
 # %%
 def run_model_and_get_outputs(Plant, ODEModelSolver, time_axis, forcing_inputs, reset_days, zero_crossing_indices):
@@ -272,7 +273,10 @@ def run_model_and_get_outputs(Plant, ODEModelSolver, time_axis, forcing_inputs, 
         grain_number_harvest_s1,
     ])
 
-    return M_p, diagnostics
+    return {
+        "metrics": M_p,              # 1D np.array
+        "diagnostics": diagnostics   # dict[str, time-series]
+    }
 
 # %% [markdown]
 # ### Run the parameter sampling
@@ -295,7 +299,8 @@ def evaluate_iparamset(iparamset: int):
         parameters.problem,
         run_fn=run_model_and_get_outputs,
     )
-    Mpxi, diagnostics = model_output[0], model_output[1]
+    Mpxi = model_output['metrics']
+    diagnostics = model_output['diagnostics']
 
     nsigfigures = len(str(np.shape(param_values)[0]))
     filename_write = f"DAESIM2_results_{experiment.xsite}_paramset{nparamset:0{nsigfigures}}.nc"
